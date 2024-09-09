@@ -83,6 +83,7 @@ export function PlanManagerForm(props) {
         useKanban: true,
         useOpenAi: true,
         useIntegrations: true,
+        isPublic: true
     });
 
     useEffect(() => {
@@ -109,7 +110,7 @@ export function PlanManagerForm(props) {
                 <Form className={classes.fullWidth}>
                     <Grid spacing={1} justifyContent="flex-start" container>
                         {/* NOME */}
-                        <Grid xs={12} sm={6} md={2} item>
+                        <Grid xs={12} sm={6} md={2} xl={2} item>
                             <Field
                                 as={TextField}
                                 label={i18n.t("plans.form.name")}
@@ -119,7 +120,22 @@ export function PlanManagerForm(props) {
                                 margin="dense"
                             />
                         </Grid>
-
+                        <Grid xs={12} sm={6} md={2} xl={2} item>
+                            <FormControl margin="dense" variant="outlined" fullWidth>
+                                <InputLabel htmlFor="status-selection">{i18n.t("plans.form.public")}</InputLabel>
+                                <Field
+                                    as={Select}
+                                    id="status-selection"
+                                    label={i18n.t("plans.form.public")}
+                                    labelId="status-selection-label"
+                                    name="isPublic"
+                                    margin="dense"
+                                >
+                                    <MenuItem value={true}>Sim</MenuItem>
+                                    <MenuItem value={false}>Não</MenuItem>
+                                </Field>
+                            </FormControl>
+                        </Grid>
                         {/* USUARIOS */}
                         <Grid xs={12} sm={6} md={1} item>
                             <Field
@@ -381,7 +397,7 @@ export function PlanManagerForm(props) {
 export function PlansManagerGrid(props) {
     const { records, onSelect } = props
     const classes = useStyles()
-    
+
     const renderWhatsapp = (row) => {
         return row.useWhatsapp === false ? `${i18n.t("plans.form.no")}` : `${i18n.t("plans.form.yes")}`;
     };
@@ -435,6 +451,7 @@ export function PlansManagerGrid(props) {
                         <TableCell align="center" style={{ width: '1%' }}>#</TableCell>
                         <TableCell align="left">{i18n.t("plans.form.name")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.users")}</TableCell>
+                        <TableCell align="center">{i18n.t("plans.form.public")}</TableCell>
                         <TableCell align="center">{i18n.t("plans.form.connections")}</TableCell>
                         <TableCell align="center">Filas</TableCell>
                         <TableCell align="center">Valor</TableCell>
@@ -460,6 +477,7 @@ export function PlansManagerGrid(props) {
                             </TableCell>
                             <TableCell align="left">{row.name || '-'}</TableCell>
                             <TableCell align="center">{row.users || '-'}</TableCell>
+                            <TableCell align="center">{row.isPublic ? "Sim": "Não" || '-'}</TableCell>
                             <TableCell align="center">{row.connections || '-'}</TableCell>
                             <TableCell align="center">{row.queues || '-'}</TableCell>
                             <TableCell align="center">{i18n.t("plans.form.money")} {row.amount ? row.amount.toLocaleString('pt-br', { minimumFractionDigits: 2 }) : '00.00'}</TableCell>
@@ -504,6 +522,7 @@ export default function PlansManager() {
         useKanban: true,
         useOpenAi: true,
         useIntegrations: true,
+        isPublic: true
     })
 
     useEffect(() => {
@@ -577,7 +596,8 @@ export default function PlansManager() {
             useExternalApi: true,
             useKanban: true,
             useOpenAi: true,
-            useIntegrations: true
+            useIntegrations: true,
+            isPublic: true
         })
     }
 
@@ -610,7 +630,8 @@ export default function PlansManager() {
             useExternalApi,
             useKanban,
             useOpenAi,
-            useIntegrations
+            useIntegrations,
+            isPublic: data.isPublic
         })
     }
 

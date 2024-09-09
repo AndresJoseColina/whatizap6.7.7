@@ -6,6 +6,7 @@ import React, {
   useContext,
 } from "react";
 import { toast } from "react-toastify";
+import { useHistory } from "react-router-dom"; // Importe o useHistory
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
@@ -35,7 +36,7 @@ import TagModal from "../../components/TagModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { Chip } from "@material-ui/core";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { CheckCircle } from "@material-ui/icons";
 
@@ -94,8 +95,11 @@ const useStyles = makeStyles((theme) => ({
 
 const Tags = () => {
   const classes = useStyles();
+  const history = useHistory(); // Inicialize o useHistory
 
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -133,9 +137,9 @@ const Tags = () => {
   }, [searchParam]);
 
   useEffect(() => {
-    const socket = socketConnection({ companyId: user.companyId });
+    // const socket = socketManager.GetSocket(user.companyId, user.id);
 
-    socket.on(`company${user.companyId}-tag`, (data) => {
+    const onTagsEvent = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_TAGS", payload: data.tag });
       }
@@ -143,12 +147,13 @@ const Tags = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_TAGS", payload: +data.tagId });
       }
-    });
+    };
+    socket.on(`company${user.companyId}-tag`, onTagsEvent);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company${user.companyId}-tag`, onTagsEvent);
     };
-  }, [user]);
+  }, [socket]);
 
   const handleOpenTagModal = () => {
     setSelectedTag(null);
@@ -193,6 +198,10 @@ const Tags = () => {
     }
   };
 
+  const handleReturnToKanban = () => {
+    history.push("/kanban");
+  };
+
   return (
     <MainContainer>
       <ConfirmationModal
@@ -203,13 +212,15 @@ const Tags = () => {
       >
         {i18n.t("tagsKanban.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-      <TagModal
-        open={tagModalOpen}
-        onClose={handleCloseTagModal}
-        aria-labelledby="form-dialog-title"
-        tagId={selectedTag && selectedTag.id}
-        kanban={1}
-      />
+      {tagModalOpen && (
+        <TagModal
+          open={tagModalOpen}
+          onClose={handleCloseTagModal}
+          aria-labelledby="form-dialog-title"
+          tagId={selectedTag && selectedTag.id}
+          kanban={1}
+        />
+      )}
       <MainHeader>
         <Title>{i18n.t("tagsKanban.title")} ({tags.length})</Title>
         <MainHeaderButtonsWrapper>
@@ -232,6 +243,13 @@ const Tags = () => {
             onClick={handleOpenTagModal}
           >
             {i18n.t("tagsKanban.buttons.add")}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleReturnToKanban}
+          >
+            {'Voltar para o Kanban'}
           </Button>
         </MainHeaderButtonsWrapper>
       </MainHeader>
@@ -266,7 +284,7 @@ const Tags = () => {
                   </TableCell>
                   <TableCell align="center">{tag?.ticketTags ? (<span>{tag?.ticketTags?.length}</span>) : <span>0</span>}</TableCell>
                   <TableCell align="center">
-                    <IconButton size="small" onClick={() => handleEditTag(tag)}> 
+                    <IconButton size="small" onClick={() => handleEditTag(tag)}>
                       <EditIcon />
                     </IconButton>
 

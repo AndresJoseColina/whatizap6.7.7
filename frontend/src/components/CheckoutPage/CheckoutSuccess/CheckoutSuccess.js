@@ -4,8 +4,6 @@ import QRCode from 'react-qr-code';
 import { SuccessContent, Total } from './style';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { FaCopy, FaCheckCircle } from 'react-icons/fa';
-import { socketConnection } from "../../../services/socket";
-import toastError from "../../../errors/toastError";
 import { useDate } from "../../../hooks/useDate";
 import { toast } from "react-toastify";
 import { AuthContext } from "../../../context/Auth/AuthContext";
@@ -16,26 +14,34 @@ function CheckoutSuccess(props) {
   const [pixString,] = useState(pix.qrcode.qrcode);
   const [copied, setCopied] = useState(false);
   const history = useHistory();
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
 
   const { dateToClient } = useDate();
 
   useEffect(() => {
     const companyId = user.companyId;
+    if (companyId) {
+      // const socket = socketManager.GetSocket();
 
-    const socket = socketConnection({ companyId, userId: user.id });
+      const onCompanyPayment = (data) => {
 
-    socket.on(`company-${companyId}-payment`, (data) => {
-
-      if (data.action === "CONCLUIDA") {
-        toast.success(`Sua licença foi renovada até ${dateToClient(data.company.dueDate)}!`);
-        setTimeout(() => {
-          history.push("/tickets");
-        }, 5000);
+        if (data.action === "CONCLUIDA") {
+          toast.success(`Sua licença foi renovada até ${dateToClient(data.company.dueDate)}!`);
+          setTimeout(() => {
+            history.push("/");
+          }, 4000);
+        }
       }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
+
+      socket.on(`company-${companyId}-payment`, onCompanyPayment);
+
+      return () => {
+        socket.off(`company-${companyId}-payment`, onCompanyPayment);
+      }
+    }
+  }, [socket]);
 
   const handleCopyQR = () => {
     setTimeout(() => {

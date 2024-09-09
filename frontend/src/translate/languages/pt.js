@@ -49,7 +49,7 @@ const messages = {
           expiration: "Sua assinatura expira em",
           days: "dias!",
           day: "dia!",
-          expirationToday: "Sua assinatura expira hora!",
+          expirationToday: "Sua assinatura expira hoje!",
         },
         token: "Token",
       },
@@ -61,7 +61,7 @@ const messages = {
         },
         charts: {
           perDay: {
-            title: "Atendimentos Hora: ",
+            title: "Atendimentos hoje: ",
           },
         },
         cards: {
@@ -75,8 +75,13 @@ const messages = {
           averageServiceTime: "T.M. de Atendimento",
           averageWaitingTime: "T.M. de Espera",
           status: "Status (Atual)",
+          activeTickets: "Tickets Ativos",
+          passiveTickets: "Tickets Passivos",
+          groups: "Grupos",
         },
         users: {
+
+
           name: "Nome",
           numberAppointments: "Quantidade de Atendimentos",
           statusNow: "Atual",
@@ -276,6 +281,7 @@ const messages = {
           pending: "devolveu a fila.",
           closed: "fechou o ticket",
           reopen: "reabriu o ticket",
+          redirect: "- redirecionado"
         },
       },
       whatsappModal: {
@@ -336,6 +342,7 @@ const messages = {
           collectiveVacationEnd: "Data final",
           collectiveVacationStart: "Data inicial",
           collectiveVacationMessage: "Mensagem de férias coletivas",
+          queueIdImportMessages: "Fila para importar as mensagens"
         },
         buttons: {
           okAdd: "Adicionar",
@@ -454,11 +461,9 @@ const messages = {
           email: "Email",
           extraName: "Nome do campo",
           extraValue: "Valor",
-          chatBotContact: "Desabilitar chatbot para esse contato",
+          chatBotContact: "Desabilitar chatbot",
           termsLGDP: "Termos LGPD aceito em:",
-          allTicket: "Visualizar chamados sem fila",
-          allowGroup: "Permitir grupos",
-          whatsapp: "Conexión origen: "
+          whatsapp: "Conexão Origem: "
         },
         buttons: {
           addExtraInfo: "Adicionar informação",
@@ -467,6 +472,9 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Contato salvo com sucesso.",
+      },
+      flowbuilderModal: {
+        flowNotIdPhrase: "Fluxo padrão",
       },
       queueModal: {
         title: {
@@ -602,7 +610,9 @@ const messages = {
           allHistoricDisabled: "Desabilitado",
           allUserChat: "Ver conversas de outros usuários",
           userClosePendingTicket: "Permitir fechar tickets pendentes",
-          showDashboard: "Ver Dashboard"
+          showDashboard: "Ver Dashboard",
+          allowRealTime: "Ver Painel de Atendimentos",
+          allowConnections: "Permitir ações nas conexões",
         },
         tabs: {
           general: "Geral",
@@ -646,6 +656,7 @@ const messages = {
           contact: "Contato",
           sendAt: "Data de Agendamento",
           sentAt: "Data de Envio",
+          assinar: "Enviar Assinatura"
         },
         buttons: {
           okAdd: "Adicionar",
@@ -665,6 +676,10 @@ const messages = {
         form: {
           name: "Nome",
           color: "Cor",
+          timeLane: "Tempo em horas para redirecionar para lane",
+          nextLaneId: "Lane",
+          greetingMessageLane: "Mensagem de saudação da lane",
+          rollbackLaneId: "Voltar para Lane após retomar atendimento"
         },
         buttons: {
           okAdd: "Adicionar",
@@ -762,6 +777,8 @@ const messages = {
             pending: "Pendente",
           },
           filterUsers: "Filtro por Usuarios",
+          filterContacts: "Filtro por Contatos",
+          ticketsPerPage: "Tickets por página",
         },
         buttons: {
           showAll: "Todos",
@@ -803,7 +820,7 @@ const messages = {
       },
       ticketsList: {
         called: "Chamado",
-        today: "Hora",
+        today: "Hoje",
         missedCall: "Chamada de voz/vídeo perdida às",
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
@@ -811,7 +828,7 @@ const messages = {
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
           "Nenhum atendimento encontrado com esse status ou termo pesquisado",
-        noQueue: "SIN FILA",
+        noQueue: "Sem Fila",
         buttons: {
           accept: "Aceitar",
           cancel: "Cancelar",
@@ -821,6 +838,7 @@ const messages = {
           transfer: "Transferir",
           ignore: "Ignorar",
           exportAsPDF: "Exportar para PDF",
+          kanbanActions: "Opções de Kanban"
         },
         acceptModal: {
           title: "Aceitar Chat",
@@ -849,9 +867,9 @@ const messages = {
         listItems: {
           dashboard: "Dashboard",
           connections: "Conexões",
-          chatsTempoReal: "Painel de Atendimentos",
+          chatsTempoReal: "Painel",
           tickets: "Atendimentos",
-          quickMessages: "Respostas Rápidas",
+          quickMessages: "Respostas rápidas",
           contacts: "Contatos",
           queues: "Filas & Chatbot",
           tags: "Tags",
@@ -871,7 +889,9 @@ const messages = {
           version: "Versão",
           kanban: "Kanban",
           prompts: "Talk.Ai",
-          allConnections: "Gerenciar conexões"
+          allConnections: "Gerenciar conexões",
+          reports: "Relatórios",
+          management: "Gerência"
         },
         appBar: {
           user: {
@@ -1125,6 +1145,7 @@ const messages = {
             tagList: "Tags",
             statusTicket: "Status do Ticket",
             openTicketStatus: "Aberto",
+            pendingTicketStatus: "Pendente",
             closedTicketStatus: "Fechado",
             enabledOpenTicket: "Habilitado",
             disabledOpenTicket: "Desabilitado",
@@ -1252,6 +1273,31 @@ const messages = {
       queueSelect: {
         inputLabel: "Filas",
         inputLabelRO: "Filas somente leitura",
+        withoutQueue: "Sem fila",
+      },
+      reports: {
+        title: "Relatórios de Atendimentos",
+        table: {
+          id: "Ticket",
+          user: "Usuário",
+          dateOpen: "Data Abertura",
+          dateClose: "Data Fechamento",
+          NPS: "NPS",
+          status: "Status",
+          whatsapp: "Conexão",
+          queue: "Fila",
+          actions: "Ações",
+          lastMessage: "Últ. Mensagem",
+          contact: "Cliente",
+          supportTime: "Tempo de Atendimento",
+        },
+        buttons: {
+
+          filter: "Aplicar Filtro",
+          onlyRated: "Apenas Avaliados",
+        },
+        searchPlaceholder: "Pesquisar...",
+
       },
       queueIntegration: {
         title: "Integrações",
@@ -1367,6 +1413,7 @@ const messages = {
           yes: "Sim",
           no: "Não",
           money: "R$",
+          public: "Público"
         },
       },
       helps: {
@@ -1407,6 +1454,7 @@ const messages = {
           deleteMessage: "Esta ação não pode ser revertida.",
         },
         table: {
+          id: "ID",
           name: "Nome",
           kanban: "Kanban",
           color: "Cor",
@@ -1516,7 +1564,14 @@ const messages = {
             enableLGPD: "Habilitar tratamento LGPD",
             requiredTag: "Tag obrigatoria para fechar ticket",
             closeTicketOnTransfer: "Fechar ticket ao transferir para outra fila",
-            DirectTicketsToWallets: "Mover automaticamente cliente para carteira"
+            DirectTicketsToWallets: "Mover automaticamente cliente para carteira",
+            showNotificationPending: "Mostrar notificação para tickets pendentes"
+          },
+          customMessages: {
+            sendQueuePositionMessage: "Mensagem de posição na fila",
+            AcceptCallWhatsappMessage: "Mensagem para informar que não aceita ligações",
+            greetingAcceptedMessage: "Mensagem de Saudação ao aceitar ticket",
+            transferMessage: "Mensagem de transferência - ${queue.name} = fila destino",
           },
           LGPD: {
             title: "LGPD",
@@ -1541,13 +1596,15 @@ const messages = {
           dialogRatingWithoutFarewellMsg: "Resolver SEM Mensagem de Despedida",
           ratingTitle: "Escolha um menu de avaliação",
           notMessage: "Nenhuma mensagem selecionada",
+          amount: "Valor de prospecção",
           buttons: {
             return: "Retornar",
             resolve: "Resolver",
             reopen: "Reabrir",
             accept: "Aceitar",
             rating: "Enviar Avaliação",
-            enableIntegration: "Habilitar/desabilitar integração",
+            enableIntegration: "Habilitar integração",
+            disableIntegration: "Desabilitar integração",
             logTicket: "Logs do Ticket",
             requiredTag: "Você deve atribuir uma tag antes de fechar o ticket.",
           },
@@ -1595,7 +1652,7 @@ const messages = {
         resolveWithNoFarewell: "Finalizar sem despedida",
         acceptAudioMessage: "Aceitar áudios do contato?",
         appointmentsModal: {
-          title: "Observações do Contato",
+          title: "Observações do Ticket",
           textarea: "Observação",
           placeholder: "Insira aqui a informação que deseja registrar",
         },

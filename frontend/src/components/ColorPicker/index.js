@@ -1,14 +1,19 @@
-import { Dialog } from "@material-ui/core";
 import React, { useState } from "react";
-
+import { Dialog } from "@material-ui/core";
 import { BlockPicker } from "react-color";
 
 const ColorPicker = ({ onChange, currentColor, handleClose, open }) => {
   const [selectedColor, setSelectedColor] = useState(currentColor);
 
-  const handleChange = color => {
+  const handleChange = (color) => {
     setSelectedColor(color.hex);
-    handleClose();
+    onChange(color.hex);
+  };
+
+  const handleDialogClose = (event, reason) => {
+    if (reason === "backdropClick") {
+      handleClose();
+    }
   };
 
   const colors = [
@@ -66,7 +71,7 @@ const ColorPicker = ({ onChange, currentColor, handleClose, open }) => {
 
   return (
     <Dialog
-      onClose={handleClose}
+      onClose={handleDialogClose}
       aria-labelledby="simple-dialog-title"
       open={open}
     >

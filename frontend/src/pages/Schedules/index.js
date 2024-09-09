@@ -17,11 +17,11 @@ import ScheduleModal from "../../components/ScheduleModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import moment from "moment";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
 import { Calendar, momentLocalizer } from "react-big-calendar";
-import "moment/locale/es";
+import "moment/locale/pt-br";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import SearchIcon from "@material-ui/icons/Search";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
@@ -66,7 +66,19 @@ var defaultMessages = {
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
-    return [...state, ...action.payload];
+    const schedules = action.payload;
+    const newSchedules = [];
+
+    schedules.forEach((schedule) => {
+      const scheduleIndex = state.findIndex((s) => s.id === schedule.id);
+      if (scheduleIndex !== -1) {
+        state[scheduleIndex] = schedule;
+      } else {
+        newSchedules.push(schedule);
+      }
+    });
+
+    return [...state, ...newSchedules];
   }
 
   if (action.type === "UPDATE_SCHEDULES") {
@@ -83,14 +95,17 @@ const reducer = (state, action) => {
 
   if (action.type === "DELETE_SCHEDULE") {
     const scheduleId = action.payload;
-    return state.filter((s) => s.id !== scheduleId);
+
+    const scheduleIndex = state.findIndex((s) => s.id === scheduleId);
+    if (scheduleIndex !== -1) {
+      state.splice(scheduleIndex, 1);
+    }
+    return [...state];
   }
 
   if (action.type === "RESET") {
     return [];
   }
-
-  return state;
 };
 
 const useStyles = makeStyles((theme) => ({
@@ -100,13 +115,35 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
+  calendarToolbar: {
+    '& .rbc-toolbar-label': {
+      color: theme.mode === "light" ? theme.palette.light : "white",
+    },
+    '& .rbc-btn-group button': {
+      color: theme.mode === "light" ? theme.palette.light : "white",
+      '&:hover': {
+        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+      },
+      '&:active': {
+        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+      },
+      '&:focus': {
+        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+      },
+      '&.rbc-active': {
+        color: theme.palette.mode === 'dark' ? '#fff' : '#000',
+      },
+    },
+  },
 }));
 
 const Schedules = () => {
   const classes = useStyles();
   const history = useHistory();
 
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -141,7 +178,6 @@ const Schedules = () => {
         params: { searchParam, pageNumber },
       });
 
-      console.log(data)
       dispatch({ type: "LOAD_SCHEDULES", payload: data.schedules });
       setHasMore(data.hasMore);
       setLoading(false);
@@ -176,10 +212,11 @@ const Schedules = () => {
   ]);
 
   useEffect(() => {
-    handleOpenScheduleModalFromContactId();
-    const socket = socketConnection({ companyId: user.companyId });
+    // handleOpenScheduleModalFromContactId();
+    // const socket = socketManager.GetSocket(user.companyId, user.id);
 
-    socket.on(`company${user.companyId}-schedule`, (data) => {
+
+    const onCompanySchedule = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }
@@ -187,12 +224,14 @@ const Schedules = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_SCHEDULE", payload: +data.scheduleId });
       }
-    });
+    }
+
+    socket.on(`company${user.companyId}-schedule`, onCompanySchedule)
 
     return () => {
-      socket.disconnect();
+      socket.off(`company${user.companyId}-schedule`, onCompanySchedule)
     };
-  }, [handleOpenScheduleModalFromContactId, user]);
+  }, [socket]);
 
   const cleanContact = () => {
     setContactId("");
@@ -265,18 +304,19 @@ const Schedules = () => {
       >
         {i18n.t("schedules.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-      <ScheduleModal
-        open={scheduleModalOpen}
-        onClose={handleCloseScheduleModal}
-        reload={fetchSchedules}
-        // aria-labelledby="form-dialog-title"
-        scheduleId={
-          selectedSchedule ? selectedSchedule.id : null
-        }
-        contactId={contactId}
-        cleanContact={cleanContact}
-
-      />
+      {scheduleModalOpen && (
+        <ScheduleModal
+          open={scheduleModalOpen}
+          onClose={handleCloseScheduleModal}
+          reload={fetchSchedules}
+          // aria-labelledby="form-dialog-title"
+          scheduleId={
+            selectedSchedule ? selectedSchedule.id : null
+          }
+          contactId={contactId}
+          cleanContact={cleanContact}
+        />
+      )}
       <MainHeader>
         <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
         <MainHeaderButtonsWrapper>
@@ -312,8 +352,8 @@ const Schedules = () => {
           localizer={localizer}
           events={schedules.map((schedule) => ({
             title: (
-              <div className="event-container">
-                <div style={eventTitleStyle}>{schedule.contact.name}</div>
+              <div key={schedule.id} className="event-container">
+                <div style={eventTitleStyle}>{schedule?.contact?.name}</div>
                 <DeleteOutlineIcon
                   onClick={() => handleDeleteSchedule(schedule.id)}
                   className="delete-icon"
@@ -333,6 +373,7 @@ const Schedules = () => {
           startAccessor="start"
           endAccessor="end"
           style={{ height: 500 }}
+          className={classes.calendarToolbar}
         />
       </Paper>
     </MainContainer>

@@ -39,17 +39,17 @@ import {
 
 import FacebookLogin from "react-facebook-login/dist/facebook-login-render-props";
 
-import MainContainer from "../../components/MainContainer";
-import MainHeader from "../../components/MainHeader";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-import Title from "../../components/Title";
-import TableRowSkeleton from "../../components/TableRowSkeleton";
+import MainContainer from "../MainContainer";
+import MainHeader from "../MainHeader";
+import MainHeaderButtonsWrapper from "../MainHeaderButtonsWrapper";
+import Title from "../Title";
+import TableRowSkeleton from "../TableRowSkeleton";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import useCompanies from "../../hooks/useCompanies";
 import api from "../../services/api";
-import WhatsAppModalAdmin from "../../components/WhatsAppModalAdmin";
-import ConfirmationModal from "../../components/ConfirmationModal";
-import QrcodeModal from "../../components/QrcodeModal";
+import WhatsAppModalAdmin from "../WhatsAppModalAdmin";
+import ConfirmationModal from "../ConfirmationModal";
+import QrcodeModal from "../QrcodeModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
@@ -122,7 +122,7 @@ const WhatsAppModalCompany = ({
   //console.log(filteredWhatsapps,"teste")
   //console.log(companyInfos,"testeeeee")
   const classes = useStyles();
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const { list } = useCompanies();
   const [loadingComp, setLoadingComp] = useState(false);
   const { whatsApps, loading } = useContext(WhatsAppsContext);

@@ -4,20 +4,24 @@ import { useState, useEffect, useContext } from "react";
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useUserMoments = () => {
   const [users, setUsers] = useState([]);
   const [update, setUpdate] = useState(true);
-  const { user } = useContext(AuthContext);
+  const [isUpdate, setIsUpdate] = useState([]);
+  const { user, socket } = useContext(AuthContext);
+
 
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/usersMoments");
+        if (update) {
+          const { data } = await api.get("/usersMoments");
 
-        setUsers(data);
-        setUpdate(false);
+          setUsers(data);
+          setUpdate(false);
+        }
       } catch (err) {
         if (err.response?.status !== 500) {
           toastError(err);
@@ -29,37 +33,30 @@ const useUserMoments = () => {
   }, [update]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    const socket = socketConnection({ companyId, userId: user.id });
-
-    socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update" || data.action === "create") {
-        // console.log(data)
-        setUpdate(!update);
+    if (user.id && socket) { // Verifica se user.id e socket estão definidos
+      const companyId = user.companyId;
+      
+      const onTicketEvent = (data) => {
+        if (isUpdate !== data) {
+          setIsUpdate(data)
+          setUpdate(prevUpdate => !prevUpdate); // Usar o valor anterior de update
+        }
       }
-      if (data.action === "delete") {
-        setUpdate(!update);
-      }
-    });
-
-    socket.on(`company-${companyId}-appMessage`, (data) => {
-      // console.log(data)
-      if (data.action === "create") {
-        setUpdate(!update);
-      }
-
-      if (data.action === "update") {
-        setUpdate(!update);
-      }
-      if (data.action === "delete") {
-        setUpdate(!update);
-      }
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  });
+      const onAppMessage = (data) => {
+        if (isUpdate !== data) {
+          setIsUpdate(data)
+          setUpdate(prevUpdate => !prevUpdate); // Usar o valor anterior de update
+        }
+      };
+  
+      socket.on(`company-${companyId}-ticket`, onTicketEvent);
+      socket.on(`company-${companyId}-appMessage`, onAppMessage);
+      return () => {
+        socket.off(`company-${companyId}-ticket`, onTicketEvent);
+        socket.off(`company-${companyId}-appMessage`, onAppMessage);
+      };
+    }
+  }, [user.id, socket]); // Dependências especificadas aqui  
 
   return { users };
 };

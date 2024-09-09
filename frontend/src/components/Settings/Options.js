@@ -135,7 +135,23 @@ export default function Options(props) {
   const [directTicketsToWallets, setDirectTicketsToWallets] = useState(false)
   const [loadingDirectTicketsToWallets, setLoadingDirectTicketsToWallets] = useState(false)
 
-  const { update:updateUserCreation, getAll } = useSettings();
+  //MENSAGENS CUSTOMIZADAS
+  const [transferMessage, setTransferMessage] = useState("");
+  const [loadingTransferMessage, setLoadingTransferMessage] = useState(false);
+
+  const [greetingAcceptedMessage, setGreetingAcceptedMessage] = useState("");
+  const [loadingGreetingAcceptedMessage, setLoadingGreetingAcceptedMessage] = useState(false);
+  
+  const [AcceptCallWhatsappMessage, setAcceptCallWhatsappMessage] = useState("");
+  const [loadingAcceptCallWhatsappMessage, setLoadingAcceptCallWhatsappMessage] = useState(false);
+
+  const [sendQueuePositionMessage, setSendQueuePositionMessage] = useState("");
+  const [loadingSendQueuePositionMessage, setLoadingSendQueuePositionMessage] = useState(false);
+
+  const [showNotificationPending, setShowNotificationPending] = useState(false);
+  const [loadingShowNotificationPending, setLoadingShowNotificationPending] = useState(false);
+
+  const { update: updateUserCreation, getAll } = useSettings();
 
   const { update } = useCompanySettings();
 
@@ -143,9 +159,9 @@ export default function Options(props) {
     return user.super;
   };
 
-  
+
   useEffect(() => {
-    
+
     if (Array.isArray(oldSettings) && oldSettings.length) {
 
       const userPar = oldSettings.find((s) => s.key === "userCreation");
@@ -155,7 +171,7 @@ export default function Options(props) {
       }
     }
   }, [oldSettings])
-  
+
 
   useEffect(() => {
     for (const [key, value] of Object.entries(settings)) {
@@ -180,7 +196,13 @@ export default function Options(props) {
       if (key === "lgpdLink") setLGPDLink(value);
       if (key === "DirectTicketsToWallets") setDirectTicketsToWallets(value);
       if (key === "closeTicketOnTransfer") setCloseTicketOnTransfer(value);
-    }    
+      if (key === "transferMessage") setTransferMessage(value);
+      if (key === "greetingAcceptedMessage") setGreetingAcceptedMessage(value);
+      if (key === "AcceptCallWhatsappMessage") setAcceptCallWhatsappMessage(value);
+      if (key === "sendQueuePositionMessage") setSendQueuePositionMessage(value);
+      if (key === "showNotificationPending") setShowNotificationPending(value);
+
+    }
   }, [settings]);
 
   async function handleChangeUserCreation(value) {
@@ -197,8 +219,8 @@ export default function Options(props) {
     setUserRating(value);
     setLoadingUserRating(true);
     await update({
-      column:"userRating",
-      data:value
+      column: "userRating",
+      data: value
     });
     setLoadingUserRating(false);
   }
@@ -207,8 +229,8 @@ export default function Options(props) {
     setScheduleType(value);
     setLoadingScheduleType(true);
     await update({
-      column:"scheduleType",
-      data:value
+      column: "scheduleType",
+      data: value
     });
     setLoadingScheduleType(false);
     if (typeof scheduleTypeChanged === "function") {
@@ -219,8 +241,8 @@ export default function Options(props) {
   async function handleChatBotType(value) {
     setChatBotType(value);
     await update({
-      column:"chatBotType",
-      data:value
+      column: "chatBotType",
+      data: value
     });
     if (typeof scheduleTypeChanged === "function") {
       setChatBotType(value);
@@ -231,18 +253,68 @@ export default function Options(props) {
     setLGPDMessage(value);
     setLoadingLGPDMessage(true);
     await update({
-      column:"lgpdMessage",
-      data:value
+      column: "lgpdMessage",
+      data: value
     });
     setLoadingLGPDMessage(false);
+  }
+
+  async function handletransferMessage(value) {
+    setTransferMessage(value);
+    setLoadingTransferMessage(true);
+    await update({
+      column: "transferMessage",
+      data: value
+    });
+    setLoadingTransferMessage(false);
+  }
+
+  async function handleGreetingAcceptedMessage(value) {
+    setGreetingAcceptedMessage(value);
+    setLoadingGreetingAcceptedMessage(true);
+    await update({
+      column: "greetingAcceptedMessage",
+      data: value
+    });
+    setLoadingGreetingAcceptedMessage(false);
+  }
+
+  async function handleAcceptCallWhatsappMessage(value) {
+    setAcceptCallWhatsappMessage(value);
+    setLoadingAcceptCallWhatsappMessage(true);
+    await update({
+      column: "AcceptCallWhatsappMessage",
+      data: value
+    });
+    setLoadingAcceptCallWhatsappMessage(false);
+  }
+
+  async function handlesendQueuePositionMessage(value) {
+    setSendQueuePositionMessage(value);
+    setLoadingSendQueuePositionMessage(true);
+    await update({
+      column: "sendQueuePositionMessage",
+      data: value
+    });
+    setLoadingSendQueuePositionMessage(false);
+  }
+
+  async function handleShowNotificationPending(value) {
+    setShowNotificationPending(value);
+    setLoadingShowNotificationPending(true);
+    await update({
+      column: "showNotificationPending",
+      data: value
+    });
+    setLoadingShowNotificationPending(false);
   }
 
   async function handleLGPDLink(value) {
     setLGPDLink(value);
     setLoadingLGPDLink(true);
     await update({
-      column:"lgpdLink",
-      data:value
+      column: "lgpdLink",
+      data: value
     });
     setLoadingLGPDLink(false);
   }
@@ -251,8 +323,8 @@ export default function Options(props) {
     setLGPDDeleteMessage(value);
     setLoadingLGPDDeleteMessage(true);
     await update({
-      column:"lgpdDeleteMessage",
-      data:value
+      column: "lgpdDeleteMessage",
+      data: value
     });
     setLoadingLGPDDeleteMessage(false);
   }
@@ -261,18 +333,18 @@ export default function Options(props) {
     setLGPDConsent(value);
     setLoadingLGPDConsent(true);
     await update({
-      column:"lgpdConsent",
-      data:value
+      column: "lgpdConsent",
+      data: value
     });
     setLoadingLGPDConsent(false);
   }
 
-  async function handleLGPDHideNumber (value) {
+  async function handleLGPDHideNumber(value) {
     setLGPDHideNumber(value);
     setLoadingLGPDHideNumber(true);
     await update({
-      column:"lgpdHideNumber",
-      data:value
+      column: "lgpdHideNumber",
+      data: value
     });
     setLoadingLGPDHideNumber(false);
   }
@@ -281,8 +353,8 @@ export default function Options(props) {
     setSendGreetingAccepted(value);
     setLoadingSendGreetingAccepted(true);
     await update({
-      column:"sendGreetingAccepted",
-      data:value
+      column: "sendGreetingAccepted",
+      data: value
     });
     setLoadingSendGreetingAccepted(false);
   }
@@ -291,8 +363,8 @@ export default function Options(props) {
     setUserRandom(value);
     setLoadingUserRandom(true);
     await update({
-      column:"userRandom",
-      data:value
+      column: "userRandom",
+      data: value
     });
     setLoadingUserRandom(false);
   }
@@ -301,8 +373,8 @@ export default function Options(props) {
     setSettingsTransfTicket(value);
     setLoadingSettingsTransfTicket(true);
     await update({
-      column:"sendMsgTransfTicket",
-      data:value
+      column: "sendMsgTransfTicket",
+      data: value
     });
     setLoadingSettingsTransfTicket(false);
   }
@@ -311,8 +383,8 @@ export default function Options(props) {
     setAcceptCallWhatsapp(value);
     setLoadingAcceptCallWhatsapp(true);
     await update({
-      column:"acceptCallWhatsapp",
-      data:value
+      column: "acceptCallWhatsapp",
+      data: value
     });
     setLoadingAcceptCallWhatsapp(false);
   }
@@ -321,10 +393,10 @@ export default function Options(props) {
     setSendSignMessage(value);
     setLoadingSendSignMessage(true);
     await update({
-      column:"sendSignMessage",
-      data:value
+      column: "sendSignMessage",
+      data: value
     });
-    localStorage.setItem("sendSignMessage", value === "enabled" ? true: false); //atualiza localstorage para sessão
+    localStorage.setItem("sendSignMessage", value === "enabled" ? true : false); //atualiza localstorage para sessão
     setLoadingSendSignMessage(false);
   }
 
@@ -332,8 +404,8 @@ export default function Options(props) {
     setSendGreetingMessageOneQueues(value);
     setLoadingSendGreetingMessageOneQueues(true);
     await update({
-      column:"sendGreetingMessageOneQueues",
-      data:value
+      column: "sendGreetingMessageOneQueues",
+      data: value
     });
     setLoadingSendGreetingMessageOneQueues(false);
   }
@@ -342,8 +414,8 @@ export default function Options(props) {
     setSendQueuePosition(value);
     setLoadingSendQueuePosition(true);
     await update({
-      column:"sendQueuePosition",
-      data:value
+      column: "sendQueuePosition",
+      data: value
     });
     setLoadingSendQueuePosition(false);
   }
@@ -352,8 +424,8 @@ export default function Options(props) {
     setSendFarewellWaitingTicket(value);
     setLoadingSendFarewellWaitingTicket(true);
     await update({
-      column:"sendFarewellWaitingTicket",
-      data:value
+      column: "sendFarewellWaitingTicket",
+      data: value
     });
     setLoadingSendFarewellWaitingTicket(false);
   }
@@ -362,8 +434,8 @@ export default function Options(props) {
     setAcceptAudioMessageContact(value);
     setLoadingAcceptAudioMessageContact(true);
     await update({
-      column:"acceptAudioMessageContact",
-      data:value
+      column: "acceptAudioMessageContact",
+      data: value
     });
     setLoadingAcceptAudioMessageContact(false);
   }
@@ -372,8 +444,8 @@ export default function Options(props) {
     setEnableLGPD(value);
     setLoadingEnableLGPD(true);
     await update({
-      column:"enableLGPD",
-      data:value
+      column: "enableLGPD",
+      data: value
     });
     setLoadingEnableLGPD(false);
   }
@@ -383,7 +455,7 @@ export default function Options(props) {
     setLoadingRequiredTag(true);
     await update({
       column: "requiredTag",
-      data:value,
+      data: value,
     });
     setLoadingRequiredTag(false);
   }
@@ -393,7 +465,7 @@ export default function Options(props) {
     setLoadingCloseTicketOnTransfer(true);
     await update({
       column: "closeTicketOnTransfer",
-      data:value,
+      data: value,
     });
     setLoadingCloseTicketOnTransfer(false);
   }
@@ -403,7 +475,7 @@ export default function Options(props) {
     setLoadingDirectTicketsToWallets(true);
     await update({
       column: "DirectTicketsToWallets",
-      data:value,
+      data: value,
     });
     setLoadingDirectTicketsToWallets(false);
   }
@@ -798,6 +870,25 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
+
+        <Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <InputLabel id="showNotificationPending-label"> {i18n.t("settings.settings.options.showNotificationPending")}</InputLabel>
+            <Select
+              labelId="showNotificationPending-label"
+              value={showNotificationPending}
+              onChange={async (e) => {
+                handleShowNotificationPending(e.target.value);
+              }}
+            >
+              <MenuItem value={false}>{i18n.t("settings.settings.options.disabled")}</MenuItem>
+              <MenuItem value={true}>{i18n.t("settings.settings.options.enabled")}</MenuItem>
+            </Select>
+            <FormHelperText>
+              {loadingShowNotificationPending && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
         {/* <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="DirectTicketsToWallets-label"> {i18n.t("settings.settings.options.DirectTicketsToWallets")}</InputLabel>
@@ -820,128 +911,224 @@ export default function Options(props) {
       <br></br>
       {/*-----------------LGPD-----------------*/}
       {enableLGPD === "enabled" && (
-      <>
-        <Grid spacing={3} container
-          style={{ marginBottom: 10 }}>
-          <Tabs
-            value={0}
-            indicatorColor="primary"
-            textColor="primary"
-            scrollButtons="on"
-            variant="scrollable"
-            className={classes.tab}
-          >
-            <Tab
+        <>
+          <Grid spacing={3} container
+            style={{ marginBottom: 10 }}>
+            <Tabs
+              value={0}
+              indicatorColor="primary"
+              textColor="primary"
+              scrollButtons="on"
+              variant="scrollable"
+              className={classes.tab}
+            >
+              <Tab
 
-              label={i18n.t("settings.settings.LGPD.title")} />
+                label={i18n.t("settings.settings.LGPD.title")} />
 
-          </Tabs>
-        </Grid>
-        <Grid spacing={3} container>
-          <Grid xs={12} sm={6} md={12} item>
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id="lgpdMessage"
-                name="lgpdMessage"
-                margin="dense"
-                multiline
-                rows={3}
-                label={i18n.t("settings.settings.LGPD.welcome")}
-                variant="outlined"
-                value={lgpdMessage}
-                onChange={async (e) => {
-                  handleLGPDMessage(e.target.value);
-                }}
-              >
-              </TextField>
-              <FormHelperText>
-                {loadinglgpdMessage && i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
+            </Tabs>
           </Grid>
-          <Grid xs={12} sm={6} md={12} item>
-            <FormControl className={classes.selectContainer}>
-              <TextField
-                id="lgpdLink"
-                name="lgpdLink"
-                margin="dense"
-                label={i18n.t("settings.settings.LGPD.linkLGPD")}
-                variant="outlined"
-                value={lgpdLink}
-                onChange={async (e) => {
-                  handleLGPDLink(e.target.value);
-                }}
-              >
-              </TextField>
-              <FormHelperText>
-                {loadingLGPDLink && i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
+          <Grid spacing={1} container>
+            <Grid xs={12} sm={6} md={12} item>
+              <FormControl className={classes.selectContainer}>
+                <TextField
+                  id="lgpdMessage"
+                  name="lgpdMessage"
+                  margin="dense"
+                  multiline
+                  rows={3}
+                  label={i18n.t("settings.settings.LGPD.welcome")}
+                  variant="outlined"
+                  value={lgpdMessage}
+                  onChange={async (e) => {
+                    handleLGPDMessage(e.target.value);
+                  }}
+                >
+                </TextField>
+                <FormHelperText>
+                  {loadinglgpdMessage && i18n.t("settings.settings.options.updating")}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+            <Grid xs={12} sm={6} md={12} item>
+              <FormControl className={classes.selectContainer}>
+                <TextField
+                  id="lgpdLink"
+                  name="lgpdLink"
+                  margin="dense"
+                  label={i18n.t("settings.settings.LGPD.linkLGPD")}
+                  variant="outlined"
+                  value={lgpdLink}
+                  onChange={async (e) => {
+                    handleLGPDLink(e.target.value);
+                  }}
+                >
+                </TextField>
+                <FormHelperText>
+                  {loadingLGPDLink && i18n.t("settings.settings.options.updating")}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+            {/* LGPD Manter ou nao mensagem deletada pelo contato */}
+            <Grid xs={12} sm={6} md={4} item>
+              <FormControl className={classes.selectContainer}>
+                <InputLabel id="lgpdDeleteMessage-label">{i18n.t("settings.settings.LGPD.obfuscateMessageDelete")}</InputLabel>
+                <Select
+                  labelId="lgpdDeleteMessage-label"
+                  value={lgpdDeleteMessage}
+                  onChange={async (e) => {
+                    handleLGPDDeleteMessage(e.target.value);
+                  }}
+                >
+                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
+                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
+                </Select>
+                <FormHelperText>
+                  {loadingLGPDDeleteMessage && i18n.t("settings.settings.options.updating")}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+            {/* LGPD Sempre solicitar confirmaçao / conscentimento dos dados */}
+            <Grid xs={12} sm={6} md={4} item>
+              <FormControl className={classes.selectContainer}>
+                <InputLabel id="lgpdConsent-label">
+                  {i18n.t("settings.settings.LGPD.alwaysConsent")}
+                </InputLabel>
+                <Select
+                  labelId="lgpdConsent-label"
+                  value={lgpdConsent}
+                  onChange={async (e) => {
+                    handleLGPDConsent(e.target.value);
+                  }}
+                >
+                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
+                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
+                </Select>
+                <FormHelperText>
+                  {loadingLGPDConsent && i18n.t("settings.settings.options.updating")}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
+            {/* LGPD Ofuscar número telefone para usuários */}
+            <Grid xs={12} sm={6} md={4} item>
+              <FormControl className={classes.selectContainer}>
+                <InputLabel id="lgpdHideNumber-label">
+                  {i18n.t("settings.settings.LGPD.obfuscatePhoneUser")}
+                </InputLabel>
+                <Select
+                  labelId="lgpdHideNumber-label"
+                  value={lgpdHideNumber}
+                  onChange={async (e) => {
+                    handleLGPDHideNumber(e.target.value);
+                  }}
+                >
+                  <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
+                  <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
+                </Select>
+                <FormHelperText>
+                  {loadingLGPDHideNumber && i18n.t("settings.settings.options.updating")}
+                </FormHelperText>
+              </FormControl>
+            </Grid>
           </Grid>
-          {/* LGPD Manter ou nao mensagem deletada pelo contato */}
-          <Grid xs={12} sm={6} md={4} item>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="lgpdDeleteMessage-label">{i18n.t("settings.settings.LGPD.obfuscateMessageDelete")}</InputLabel>
-              <Select
-                labelId="lgpdDeleteMessage-label"
-                value={lgpdDeleteMessage}
-                onChange={async (e) => {
-                  handleLGPDDeleteMessage(e.target.value);
-                }}
-              >
-                <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-              </Select>
-              <FormHelperText>
-                {loadingLGPDDeleteMessage && i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-          {/* LGPD Sempre solicitar confirmaçao / conscentimento dos dados */}
-          <Grid xs={12} sm={6} md={4} item>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="lgpdConsent-label">
-              {i18n.t("settings.settings.LGPD.alwaysConsent")}
-              </InputLabel>
-              <Select
-                labelId="lgpdConsent-label"
-                value={lgpdConsent}
-                onChange={async (e) => {
-                  handleLGPDConsent(e.target.value);
-                }}
-              >
-                <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-              </Select>
-              <FormHelperText>
-                {loadingLGPDConsent && i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-          {/* LGPD Ofuscar número telefone para usuários */}
-          <Grid xs={12} sm={6} md={4} item>
-            <FormControl className={classes.selectContainer}>
-              <InputLabel id="lgpdHideNumber-label">
-              {i18n.t("settings.settings.LGPD.obfuscatePhoneUser")}
-              </InputLabel>
-              <Select
-                labelId="lgpdHideNumber-label"
-                value={lgpdHideNumber}
-                onChange={async (e) => {
-                  handleLGPDHideNumber(e.target.value);
-                }}
-              >
-                <MenuItem value={"disabled"}>{i18n.t("settings.settings.LGPD.disabled")}</MenuItem>
-                <MenuItem value={"enabled"}>{i18n.t("settings.settings.LGPD.enabled")}</MenuItem>
-              </Select>
-              <FormHelperText>
-                {loadingLGPDHideNumber && i18n.t("settings.settings.options.updating")}
-              </FormHelperText>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </>
+        </>
       )}
+      <Grid spacing={1} container>
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="transferMessage"
+              name="transferMessage"
+              margin="dense"
+              multiline
+              rows={3}
+              label={i18n.t("settings.settings.customMessages.transferMessage")}
+              variant="outlined"
+              value={transferMessage}
+              required={SettingsTransfTicket === "enabled"}
+              onChange={async (e) => {
+                handletransferMessage(e.target.value);
+              }}
+            >
+            </TextField>
+            <FormHelperText>
+              {loadingTransferMessage && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="greetingAcceptedMessage"
+              name="greetingAcceptedMessage"
+              margin="dense"
+              multiline
+              rows={3}
+              label={i18n.t("settings.settings.customMessages.greetingAcceptedMessage")}
+              variant="outlined"
+              value={greetingAcceptedMessage}
+              required={SendGreetingAccepted === "enabled"}
+              onChange={async (e) => {
+                handleGreetingAcceptedMessage(e.target.value);
+              }}
+            >
+            </TextField>
+            <FormHelperText>
+              {loadingGreetingAcceptedMessage && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="AcceptCallWhatsappMessage"
+              name="AcceptCallWhatsappMessage"
+              margin="dense"
+              multiline
+              rows={3}
+              label={i18n.t("settings.settings.customMessages.AcceptCallWhatsappMessage")}
+              variant="outlined"
+              required={AcceptCallWhatsapp === "disabled"}
+              value={AcceptCallWhatsappMessage}
+              onChange={async (e) => {
+                handleAcceptCallWhatsappMessage(e.target.value);
+              }}
+            >
+            </TextField>
+            <FormHelperText>
+              {loadingAcceptCallWhatsappMessage && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="sendQueuePositionMessage"
+              name="sendQueuePositionMessage"
+              margin="dense"
+              multiline
+              required={sendQueuePosition === "enabled"}
+              rows={3}
+              label={i18n.t("settings.settings.customMessages.sendQueuePositionMessage")}
+              variant="outlined"
+              value={sendQueuePositionMessage}
+              onChange={async (e) => {
+                handlesendQueuePositionMessage(e.target.value);
+              }}
+            >
+            </TextField>
+            <FormHelperText>
+              {loadingSendQueuePositionMessage && i18n.t("settings.settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        
+              
+      </Grid>
     </>
   );
 }

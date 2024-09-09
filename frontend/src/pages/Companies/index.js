@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
@@ -97,7 +97,9 @@ const Companies = () => {
     const { dateToClient, datetimeToClient } = useDate();
 
     // const { getPlanCompany } = usePlans();
-    const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+    const { user, socket } = useContext(AuthContext);
+
 
     useEffect(() => {
         async function fetchData() {
@@ -137,15 +139,15 @@ const Companies = () => {
         return () => clearTimeout(delayDebounceFn);
     }, [searchParam, pageNumber]);
 
-    useEffect(() => {
-        const companyId = user.companyId;
-        const socket = socketConnection({ companyId, userId: user.id });
-        // const socket = socketConnection();
+//     useEffect(() => {
+//         const companyId = user.companyId;
+//   //    const socket = socketManager.GetSocket();
+//         // const socket = socketConnection();
 
-        return () => {
-            socket.disconnect();
-        };
-    }, []);
+//         return () => {
+//             socket.disconnect();
+//         };
+//     }, []);
 
     const handleOpenCompanyModal = () => {
         setSelectedCompany(null);
@@ -305,6 +307,9 @@ const Companies = () => {
                             <TableCell align="center">{i18n.t("compaies.table.createdAt")}</TableCell>
                             <TableCell align="center">{i18n.t("compaies.table.dueDate")}</TableCell>
                             <TableCell align="center">{i18n.t("compaies.table.lastLogin")}</TableCell>
+                            <TableCell align="center">Tamanho da pasta</TableCell>
+                            <TableCell align="center">Total de arquivos</TableCell>
+                            <TableCell align="center">Ultimo update</TableCell>
                             {/* <TableCell align="center">{i18n.t("compaies.table.numberAttendants")}</TableCell> */}
                             {/* <TableCell align="center">{i18n.t("compaies.table.numberConections")}</TableCell> */}
                             {/* <TableCell align="center">{i18n.t("compaies.table.numberQueues")}</TableCell> */}
@@ -326,11 +331,14 @@ const Companies = () => {
                                     <TableCell align="center">{renderStatus(company.status)}</TableCell>
                                     <TableCell align="center">{company.name}</TableCell>
                                     <TableCell align="center">{company.email}</TableCell>
-                                    <TableCell align="center">{company.plan.name}</TableCell>
+                                    <TableCell align="center">{company?.plan?.name}</TableCell>
                                     <TableCell align="center">R$ {renderPlanValue(company)}</TableCell>
                                     <TableCell align="center">{dateToClient(company.createdAt)}</TableCell>
                                     <TableCell align="center">{dateToClient(company.dueDate)}<br /><span>{company.recurrence}</span></TableCell>
                                     <TableCell align="center">{datetimeToClient(company.lastLogin)}</TableCell>
+                                    <TableCell align="center">{company.folderSize}</TableCell>
+                                    <TableCell align="center">{company.numberFileFolder}</TableCell>
+                                    <TableCell align="center">{datetimeToClient(company.updatedAtFolder)}</TableCell>
                                     {/* <TableCell align="center">{company.plan.users}</TableCell> */}
                                     {/* <TableCell align="center">{company.plan.connections}</TableCell> */}
                                     {/* <TableCell align="center">{company.plan.queues}</TableCell> */}

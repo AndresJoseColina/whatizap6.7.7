@@ -1,9 +1,6 @@
 node_modules
-public/*
-!public/.gitkeep
+dist
 .env
-.env.test
-
 yarn.lock
 yarn-error.log
 
@@ -12,7 +9,4 @@ yarn-error.log
 # Ignore test-related files
 /coverage.data
 /coverage/
-
-/backups/*
-backups/*
 

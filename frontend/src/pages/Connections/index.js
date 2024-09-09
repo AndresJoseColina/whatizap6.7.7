@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useContext, useEffect } from "react";
 import { toast } from "react-toastify";
 import { add, format, parseISO } from "date-fns";
@@ -5,7 +6,7 @@ import { add, format, parseISO } from "date-fns";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
 import PopupState, { bindTrigger, bindMenu } from "material-ui-popup-state";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
 import {
@@ -56,6 +57,8 @@ import formatSerializedId from '../../utils/formatSerializedId';
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
 import { useHistory } from "react-router-dom/cjs/react-router-dom.min";
+import ForbiddenPage from "../../components/ForbiddenPage";
+import { Can } from "../../components/Can";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -166,7 +169,9 @@ const Connections = () => {
   const [confirmModalInfo, setConfirmModalInfo] = useState(confirmationModalInitialState);
   const [planConfig, setPlanConfig] = useState(false);
 
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
   const companyId = user.companyId;
 
   const { getPlanCompany } = usePlans();
@@ -218,8 +223,7 @@ const Connections = () => {
   };
 
   useEffect(() => {
-    const socket = socketConnection({ companyId, userId: user.id });
-
+    // const socket = socketManager.GetSocket();
     socket.on(`importMessages-${user.companyId}`, (data) => {
       if (data.action === "refresh") {
         setStatusImport([]);
@@ -227,7 +231,6 @@ const Connections = () => {
       }
       if (data.action === "update") {
         setStatusImport(data.status);
-        console.log("Importação concluida com exito", data);
       }
     });
 
@@ -396,52 +399,71 @@ const Connections = () => {
     return (
       <>
         {whatsApp.status === "qrcode" && (
-          <Button
-            size="small"
-            variant="contained"
-            color="primary"
-            onClick={() => handleOpenQrModal(whatsApp)}
-          >
-            {i18n.t("connections.buttons.qrcode")}
-          </Button>
+          <Can
+            role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+            perform="connections-page:addConnection"
+            yes={() => (
+              <Button
+                size="small"
+                variant="contained"
+                color="primary"
+                onClick={() => handleOpenQrModal(whatsApp)}
+              >
+                {i18n.t("connections.buttons.qrcode")}
+              </Button>
+            )}
+          />
         )}
         {whatsApp.status === "DISCONNECTED" && (
-          <>
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              onClick={() => handleStartWhatsAppSession(whatsApp.id)}
-            >
-              {i18n.t("connections.buttons.tryAgain")}
-            </Button>{" "}
-            <Button
-              size="small"
-              variant="outlined"
-              color="secondary"
-              onClick={() => handleRequestNewQrCode(whatsApp.id)}
-            >
-              {i18n.t("connections.buttons.newQr")}
-            </Button>
-          </>
+          <Can
+            role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+            perform="connections-page:addConnection"
+            yes={() => (
+              <>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => handleStartWhatsAppSession(whatsApp.id)}
+                >
+                  {i18n.t("connections.buttons.tryAgain")}
+                </Button>{" "}
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => handleRequestNewQrCode(whatsApp.id)}
+                >
+                  {i18n.t("connections.buttons.newQr")}
+                </Button>
+              </>
+            )}
+          />
         )}
         {(whatsApp.status === "CONNECTED" ||
           whatsApp.status === "PAIRING" ||
           whatsApp.status === "TIMEOUT") && (
-            <>
-              <Button
-                size="small"
-                variant="outlined"
-                color="secondary"
-                onClick={() => {
-                  handleOpenConfirmationModal("disconnect", whatsApp.id);
-                }}
-              >
-                {i18n.t("connections.buttons.disconnect")}
-              </Button>
+            <Can
+              role={user.profile}
+              perform="connections-page:addConnection"
+              yes={() => (
+                <>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="secondary"
+                    onClick={() => {
+                      handleOpenConfirmationModal("disconnect", whatsApp.id);
+                    }}
+                  >
+                    {i18n.t("connections.buttons.disconnect")}
+                  </Button>
 
-              {renderImportButton(whatsApp)}
-            </>)}
+                  {renderImportButton(whatsApp)}
+                </>
+              )}
+            />
+          )}
         {whatsApp.status === "OPENING" && (
           <Button size="small" variant="outlined" disabled color="default">
             {i18n.t("connections.buttons.connecting")}
@@ -522,216 +544,237 @@ const Connections = () => {
         onClose={handleCloseWhatsAppModal}
         whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
       />
-      <MainHeader>
-        <Title>{i18n.t("connections.title")} ({whatsApps.length})</Title>
-        <MainHeaderButtonsWrapper>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={restartWhatsapps}
-          >
-            {i18n.t("connections.restartConnections")}
-          </Button>
-
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => openInNewTab(`https://wa.me/${process.env.REACT_APP_NUMBER_SUPPORT}`)}
-          >
-            {i18n.t("connections.callSupport")}
-          </Button>
-          <PopupState variant="popover" popupId="demo-popup-menu">
-            {(popupState) => (
-              <React.Fragment>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  {...bindTrigger(popupState)}
-                >
-                  {i18n.t("connections.newConnection")}
-                </Button>
-                <Menu {...bindMenu(popupState)}>
-                  {/* WHATSAPP */}
-                  <MenuItem
-                    disabled={planConfig?.plan?.useWhatsapp ? false : true}
-                    onClick={() => {
-                      handleOpenWhatsAppModal();
-                      popupState.close();
-                    }}
-                  >
-                    <WhatsApp
-                      fontSize="small"
-                      style={{
-                        marginRight: "10px",
-                        color: "#25D366",
-                      }}
-                    />
-                    WhatsApp
-                  </MenuItem>
-                  {/* FACEBOOK */}
-                  <FacebookLogin
-                    appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-                    autoLoad={false}
-                    fields="name,email,picture"
-                    version="9.0"
-                    scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?  
-                      "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management" 
-                    : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-                    callback={responseFacebook}
-                    render={(renderProps) => (
-                      <MenuItem
-                        disabled={planConfig?.plan?.useFacebook ? false : true}
-                        onClick={renderProps.onClick}
-                      >
-                        <Facebook
-                          fontSize="small"
-                          style={{
-                            marginRight: "10px",
-                            color: "#3b5998",
-                          }}
-                        />
-                        Facebook
-                      </MenuItem>
-                    )}
-                  />
-                  {/* INSTAGRAM */}
-                  <FacebookLogin
-                    appId={process.env.REACT_APP_FACEBOOK_APP_ID}
-                    autoLoad={false}
-                    fields="name,email,picture"
-                    version="9.0"
-                    scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ? 
-                      "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management" 
-                    : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
-                    callback={responseInstagram}
-                    render={(renderProps) => (
-                      <MenuItem
-                        disabled={planConfig?.plan?.useInstagram ? false : true}
-                        onClick={renderProps.onClick}
-                      >
-                        <Instagram
-                          fontSize="small"
-                          style={{
-                            marginRight: "10px",
-                            color: "#e1306c",
-                          }}
-                        />
-                        Instagram
-                      </MenuItem>
-                    )}
-                  />
-
-                </Menu>
-              </React.Fragment>
-            )}
-          </PopupState>
-        </MainHeaderButtonsWrapper>
-      </MainHeader>
-
-      {statusImport?.all ? (
+      {user.profile === "user" && user.allowConnections === "disabled" ?
+        <ForbiddenPage />
+        :
         <>
-          <div style={{ margin: "auto", marginBottom: 12 }}>
-            <Card className={classes.root}>
-              <CardContent className={classes.content}>
-                <Typography component="h5" variant="h5">
+          <MainHeader>
+            <Title>{i18n.t("connections.title")} ({whatsApps.length})</Title>
+            <MainHeaderButtonsWrapper>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={restartWhatsapps}
+              >
+                {i18n.t("connections.restartConnections")}
+              </Button>
 
-                  {statusImport?.this === -1 ? i18n.t("connections.buttons.preparing") : i18n.t("connections.buttons.importing")}
-
-                </Typography>
-                {statusImport?.this === -1 ?
-                  <Typography component="h6" variant="h6" align="center">
-
-                    <CircularProgress
-                      size={24}
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => openInNewTab(`https://wa.me/${process.env.REACT_APP_NUMBER_SUPPORT}`)}
+              >
+                {i18n.t("connections.callSupport")}
+              </Button>
+              <PopupState variant="popover" popupId="demo-popup-menu">
+                {(popupState) => (
+                  <React.Fragment>
+                    <Can
+                      role={user.profile}
+                      perform="connections-page:addConnection"
+                      yes={() => (
+                        <>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            {...bindTrigger(popupState)}
+                          >
+                            {i18n.t("connections.newConnection")}
+                          </Button>
+                          <Menu {...bindMenu(popupState)}>
+                            {/* WHATSAPP */}
+                            <MenuItem
+                              disabled={planConfig?.plan?.useWhatsapp ? false : true}
+                              onClick={() => {
+                                handleOpenWhatsAppModal();
+                                popupState.close();
+                              }}
+                            >
+                              <WhatsApp
+                                fontSize="small"
+                                style={{
+                                  marginRight: "10px",
+                                  color: "#25D366",
+                                }}
+                              />
+                              WhatsApp
+                            </MenuItem>
+                            {/* FACEBOOK */}
+                            <FacebookLogin
+                              appId={process.env.REACT_APP_FACEBOOK_APP_ID}
+                              autoLoad={false}
+                              fields="name,email,picture"
+                              version="9.0"
+                              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
+                                "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                                : "public_profile,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
+                              callback={responseFacebook}
+                              render={(renderProps) => (
+                                <MenuItem
+                                  disabled={planConfig?.plan?.useFacebook ? false : true}
+                                  onClick={renderProps.onClick}
+                                >
+                                  <Facebook
+                                    fontSize="small"
+                                    style={{
+                                      marginRight: "10px",
+                                      color: "#3b5998",
+                                    }}
+                                  />
+                                  Facebook
+                                </MenuItem>
+                              )}
+                            />
+                            {/* INSTAGRAM */}
+                            <FacebookLogin
+                              appId={process.env.REACT_APP_FACEBOOK_APP_ID}
+                              autoLoad={false}
+                              fields="name,email,picture"
+                              version="9.0"
+                              scope={process.env.REACT_APP_REQUIRE_BUSINESS_MANAGEMENT?.toUpperCase() === "TRUE" ?
+                                "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement,business_management"
+                                : "public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_show_list,pages_manage_metadata,pages_read_engagement"}
+                              callback={responseInstagram}
+                              render={(renderProps) => (
+                                <MenuItem
+                                  disabled={planConfig?.plan?.useInstagram ? false : true}
+                                  onClick={renderProps.onClick}
+                                >
+                                  <Instagram
+                                    fontSize="small"
+                                    style={{
+                                      marginRight: "10px",
+                                      color: "#e1306c",
+                                    }}
+                                  />
+                                  Instagram
+                                </MenuItem>
+                              )}
+                            />
+                          </Menu>
+                        </>
+                      )}
                     />
+                  </React.Fragment>
+                )}
+              </PopupState>
+            </MainHeaderButtonsWrapper>
+          </MainHeader>
 
-                  </Typography>
-
-
-
-                  :
-                  <>
-
-                    <Typography component="h6" variant="h6" align="center">
-                      {`${i18n.t(`connections.typography.processed`)} ${statusImport?.this} ${i18n.t(`connections.typography.in`)} ${statusImport?.all}  ${i18n.t(`connections.typography.date`)}: ${statusImport?.date} `}
-                    </Typography>
-                    <Typography align="center">
-                      <CircularProgressWithLabel
-                        style={{ margin: "auto" }}
-                        value={(statusImport?.this / statusImport?.all) * 100}
-                      />
-                    </Typography>
-                  </>
-
-
-                }
-
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      ) : null}
-
-      <Paper className={classes.mainPaper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell align="center">Channel</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.name")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.number")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.status")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.session")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.lastUpdate")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.default")}</TableCell>
-              <TableCell align="center">{i18n.t("connections.table.actions")}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRowSkeleton />
-            ) : (
+          {
+            statusImport?.all ? (
               <>
-                {whatsApps?.length > 0 &&
-                  whatsApps.map((whatsApp) => (
-                    <TableRow key={whatsApp.id}>
-                      <TableCell align="center">{IconChannel(whatsApp.channel)}</TableCell>
-                      <TableCell align="center">{whatsApp.name}</TableCell>
-                      <TableCell align="center">{whatsApp.number ? (<>{formatSerializedId(whatsApp.number)}</>) : "-"}</TableCell>
-                      <TableCell align="center">{renderStatusToolTips(whatsApp)}</TableCell>
-                      <TableCell align="center">{renderActionButtons(whatsApp)}</TableCell>
-                      <TableCell align="center">{format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}</TableCell>
-                      <TableCell align="center">
-                        {whatsApp.isDefault && (
-                          <div className={classes.customTableCell}>
-                            <CheckCircle style={{ color: green[500] }} />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleEditWhatsApp(whatsApp)}
-                        >
-                          <Edit />
-                        </IconButton>
+                <div style={{ margin: "auto", marginBottom: 12 }}>
+                  <Card className={classes.root}>
+                    <CardContent className={classes.content}>
+                      <Typography component="h5" variant="h5">
 
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            handleOpenConfirmationModal("delete", whatsApp.id);
-                          }}
-                        >
-                          <DeleteOutline />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        {statusImport?.this === -1 ? i18n.t("connections.buttons.preparing") : i18n.t("connections.buttons.importing")}
+
+                      </Typography>
+                      {statusImport?.this === -1 ?
+                        <Typography component="h6" variant="h6" align="center">
+
+                          <CircularProgress
+                            size={24}
+                          />
+
+                        </Typography>
+                        :
+                        <>
+                          <Typography component="h6" variant="h6" align="center">
+                            {`${i18n.t(`connections.typography.processed`)} ${statusImport?.this} ${i18n.t(`connections.typography.in`)} ${statusImport?.all}  ${i18n.t(`connections.typography.date`)}: ${statusImport?.date} `}
+                          </Typography>
+                          <Typography align="center">
+                            <CircularProgressWithLabel
+                              style={{ margin: "auto" }}
+                              value={(statusImport?.this / statusImport?.all) * 100}
+                            />
+                          </Typography>
+                        </>
+                      }
+                    </CardContent>
+                  </Card>
+                </div>
               </>
-            )}
-          </TableBody>
-        </Table>
-      </Paper>
-    </MainContainer>
+            ) : null
+          }
+
+          <Paper className={classes.mainPaper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">Channel</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.name")}</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.number")}</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.status")}</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.session")}</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.lastUpdate")}</TableCell>
+                  <TableCell align="center">{i18n.t("connections.table.default")}</TableCell>
+                  <Can
+                    role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+                    perform="connections-page:addConnection"
+                    yes={() => (
+                      <TableCell align="center">{i18n.t("connections.table.actions")}</TableCell>
+                    )}
+                  />
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRowSkeleton />
+                ) : (
+                  <>
+                    {whatsApps?.length > 0 &&
+                      whatsApps.map((whatsApp) => (
+                        <TableRow key={whatsApp.id}>
+                          <TableCell align="center">{IconChannel(whatsApp.channel)}</TableCell>
+                          <TableCell align="center">{whatsApp.name}</TableCell>
+                          <TableCell align="center">{whatsApp.number && whatsApp.channel === 'whatsapp' ? (<>{formatSerializedId(whatsApp.number)}</>) : whatsApp.number}</TableCell>
+                          <TableCell align="center">{renderStatusToolTips(whatsApp)}</TableCell>
+                          <TableCell align="center">{renderActionButtons(whatsApp)}</TableCell>
+                          <TableCell align="center">{format(parseISO(whatsApp.updatedAt), "dd/MM/yy HH:mm")}</TableCell>
+                          <TableCell align="center">
+                            {whatsApp.isDefault && (
+                              <div className={classes.customTableCell}>
+                                <CheckCircle style={{ color: green[500] }} />
+                              </div>
+                            )}
+                          </TableCell>
+                          <Can
+                            role={user.profile}
+                            perform="connections-page:addConnection"
+                            yes={() => (
+                              <TableCell align="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleEditWhatsApp(whatsApp)}
+                                >
+                                  <Edit />
+                                </IconButton>
+
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    handleOpenConfirmationModal("delete", whatsApp.id);
+                                  }}
+                                >
+                                  <DeleteOutline />
+                                </IconButton>
+                              </TableCell>
+                            )}
+                          />
+                        </TableRow>
+                      ))}
+                  </>
+                )}
+              </TableBody>
+            </Table>
+          </Paper>
+        </>
+      }
+    </MainContainer >
+
   );
 };
 

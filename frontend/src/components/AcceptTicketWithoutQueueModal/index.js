@@ -52,7 +52,7 @@ const AcceptTicketWithouSelectQueue = ({ modalOpen, onClose, ticketId, ticket })
 	const [ openAlert, setOpenAlert ] = useState(false);
 	const [ userTicketOpen, setUserTicketOpen] = useState("");
 	const [ queueTicketOpen, setQueueTicketOpen] = useState("");
-    const { setCurrentTicket } = useContext(TicketsContext);
+	const { tabOpen, setTabOpen } = useContext(TicketsContext);
 
 	const {get:getSetting} = useCompanySettings();
 
@@ -77,12 +77,6 @@ const handleCloseAlert = () => {
 	setLoading(false)
 };
 
-const handleSelectTicket = (ticket) => {
-	const code = uuidv4();
-	const { id, uuid } = ticket;
-	setCurrentTicket({ id, uuid, code });
-};
-
 const handleSendMessage = async (id) => {
 
 	let isGreetingMessage = false;
@@ -95,14 +89,25 @@ const handleSendMessage = async (id) => {
 	} catch (err) {
 		toastError(err);
 	}
+	
+	let settingMessage
+	try {
+		settingMessage = await getSetting({
+			"column": "greetingAcceptedMessage"
+		})
+	} catch (err) {
+		toastError(err);
+	}
+	
 	// console.log(ticket)
 	if (isGreetingMessage && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled") && ticket.status === "pending") {
-		const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
+		const msg = `${settingMessage.greetingAcceptedMessage}`;
+		// const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
 		const message = {
 			read: 1,
 			fromMe: true,
 			mediaUrl: "",
-			body: `*${i18n.t("mainDrawer.appBar.user.virtualAssistant")}:*\n${msg.trim()}`,
+			body: `${msg.trim()}`,
 		};
 		try {
 			await api.post(`/messages/${id}`, message);
@@ -128,13 +133,13 @@ const handleUpdateTicketStatus = async (queueId) => {
 				setQueueTicketOpen(otherTicket.data.queue.name)
 			} else {
 				setLoading(false);
-				handleSelectTicket(otherTicket.data);
+				setTabOpen(otherTicket.isGroup ? "group" : "open");
 				history.push(`/tickets/${otherTicket.data.uuid}`);
 			}
 		} else {
 			handleSendMessage(ticket.id)
 			setLoading(false);
-			handleSelectTicket(ticket);
+			setTabOpen(ticket.isGroup ? "group" : "open");
 			history.push(`/tickets/${ticket.uuid}`);
 			handleClose();
 		}

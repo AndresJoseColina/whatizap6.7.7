@@ -65,6 +65,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			});
 
 			setLoading(false);
+
 			history.push("/tickets");
 		} catch (err) {
 			setLoading(false);

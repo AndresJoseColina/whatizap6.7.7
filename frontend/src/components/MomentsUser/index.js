@@ -5,12 +5,11 @@ import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { Inbox, ReportProblem } from "@mui/icons-material";
-import UserStatusIcon from "../UserModal/statusIcon";
-import { socketConnection } from "../../services/socket";
+import {  ReportProblem, VisibilityOutlined } from "@mui/icons-material";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { toast } from "react-toastify";
 import { yellow } from "@mui/material/colors";
-import { Avatar, CardHeader, Divider, List, ListItem, ListItemAvatar, ListItemText, Paper, Typography, Card, makeStyles, Container, Badge, Grid } from "@material-ui/core";
+import { Avatar, CardHeader, Divider, List, ListItem, ListItemAvatar, ListItemText, Paper, Typography, Card, makeStyles, Container, Badge, Grid, Tooltip } from "@material-ui/core";
 import { format, isSameDay, parseISO } from "date-fns";
 import { grey } from "@material-ui/core/colors";
 import { getBackendUrl } from "../../config";
@@ -99,27 +98,27 @@ const useStyles = makeStyles((theme) => ({
 const DashboardManage = () => {
   const classes = useStyles();
   const history = useHistory();
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
   const [tickets, setTickets] = useState([]);
-  const [update, setUpdate] = useState(true);
-  const [ticketNot, setTicketNot] = useState(null);
+  const [update, setUpdate] = useState(false);
+  const [ticketNot, setTicketNot] = useState(0);
   const companyId = user.companyId;
 
 
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
 
-  useEffect(() => {
-    setTicketNot(0);
-  }, []);
+ 
 
   useEffect(() => {
     (async () => {
       try {
         const { data } = await api.get("/usersMoments");
-
+        console.log(data)
         setTickets(data);
-        setTicketNot(null);
+        setUpdate(!update);
       } catch (err) {
         if (err.response?.status !== 500) {
           toastError(err);
@@ -128,32 +127,47 @@ const DashboardManage = () => {
         }
       }
     })();
-  }, [user, ticketNot]);
+  }, []);
 
   useEffect(() => {
-    const socket = socketConnection({ companyId, userId: user.id });
-
-    socket.on("connect", () => socket.emit("joinNotification"));
-
-    socket.on(`company-${companyId}-appMessage`, (data) => {
-      if (data.action === "create") {
-        setTicketNot(data.ticket.id);
+    const companyId = user.companyId;
+    console.log("socket painel")
+    // const socket = socketManager.GetSocket();
+  
+    // const onConnect = () => {
+    //   socket.emit("joinChatBox", `${ticketId}`);
+    // }
+    const onAppMessage = (data) => {
+      if (data.action === "create" || data.action === "update" || data.action === "delete") {
+        (async () => {
+          try {
+            const { data } = await api.get("/usersMoments");
+            setTickets(data);
+            setUpdate(!update);
+          } catch (err) {
+            if (err.response?.status !== 500) {
+              toastError(err);
+            } else {
+              toast.error(`${i18n.t("frontEndErrors.getUsers")}`);
+            }
+          }
+        })();
       }
-
-      if (data.action === "update") {
-        setTicketNot(data.ticket.id);
-      }
-      if (data.action === "delete") {
-        setTicketNot(data.ticketId);
-      }
-    });
-
+    }
+  
+    // socket.on("connect", onConnect);
+    socket.on(`company-${companyId}-ticket`, onAppMessage)
+    socket.on(`company-${companyId}-appMessage`, onAppMessage);
+  
     return () => {
-      socket.disconnect();
+      // socket.off("connect", onConnect);
+      socket.off(`company-${companyId}-ticket`, onAppMessage)
+      socket.off(`company-${companyId}-appMessage`, onAppMessage);
     };
-  }, [user]);
+  }, [socket]);
 
   const Moments = useMemo(() => {
+    // console.log(tickets)
     if (tickets && tickets.length > 0) {
       const ticketsByUser = tickets.reduce((userTickets, ticket) => {
         const user = ticket.user;
@@ -179,10 +193,10 @@ const DashboardManage = () => {
               <Paper elevation={3} className={classes.cardHeader}>
                 <CardHeader
                   style={{ maxWidth: '380px', width: '100%' }}
-                  avatar={<Avatar alt={`${group.user.profileImage}`} src={group.user.profileImage? `${backendUrl}/public/company${companyId}/user/${group.user.profileImage}` : null} />}
+                  avatar={<Avatar alt={`${group.user.profileImage}`} src={group.user.profileImage ? `${backendUrl}/public/company${companyId}/user/${group.user.profileImage}` : null} />}
                   title={(
                     <span>{group?.user?.name || "Pendentes"} <br />
-                      {`Atenciones: ${group.userTickets?.length}`}
+                      {`Atendimentos: ${group.userTickets?.length}`}
                     </span>
                   )}
                 />
@@ -196,7 +210,7 @@ const DashboardManage = () => {
                       </ListItemAvatar>
                       <ListItemText
                         disableTypography
-                        primary={ticket?.contact?.name?.length > 30 ? ticket?.contact?.name.substring(0,25) + '...' : ticket?.contact?.name}
+                        primary={ticket?.contact?.name?.length > 30 ? ticket?.contact?.name.substring(0, 25) + '...' : ticket?.contact?.name}
                         secondary={
                           <Fragment>
                             <div>
@@ -209,7 +223,7 @@ const DashboardManage = () => {
                               </Typography>
                             </div>
                             <Badge className={classes.connectionTag}>{ticket?.whatsapp?.name}</Badge>
-                            <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name.toUpperCase() || "SIN FILA"}</Badge>
+                            <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name.toUpperCase() || "SEM FILA"}</Badge>
                           </Fragment>
                         }
                       />
@@ -224,6 +238,20 @@ const DashboardManage = () => {
                           <>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
                         )}
                       </Typography>
+                      {(user.profile === "admin" || ticket.userId === user.id) && (
+                        <Tooltip title="Acessar Ticket">
+                          <VisibilityOutlined
+                            onClick={() => history.push(`/tickets/${ticket.uuid}`)}
+                            fontSize="small"
+                            style={{
+                              color: grey[500],
+                              cursor: "pointer",
+                              marginRight: 5,
+                              bottom: "-15px"
+                            }}
+                          />
+                        </Tooltip>
+                      )}
                     </ListItem>
                     <Divider variant="inset" component="li" />
                   </List>
@@ -237,7 +265,7 @@ const DashboardManage = () => {
     } else {
       return null;
     }
-  }, [ticketNot]);
+  }, [update]);
 
   const MomentsPending = useMemo(() => {
     if (tickets && tickets.length > 0) {
@@ -250,12 +278,12 @@ const DashboardManage = () => {
               <Paper elevation={3} className={classes.cardHeaderPending}>
                 <CardHeader
                   style={{ maxWidth: '380px', width: '100%' }}
-                  avatar={<Avatar  />}
+                  avatar={<Avatar />}
                   title={(
                     <span>{"Pendentes"}
                       <ReportProblem className={classes.pending} />
                       <div>
-                        Atenciones: {pendingTickets?.length}
+                        Atendimentos: {pendingTickets?.length}
                       </div>
                     </span>
                   )}
@@ -283,7 +311,7 @@ const DashboardManage = () => {
                               </Typography>
                             </div>
                             <Badge className={classes.connectionTag}>{ticket?.whatsapp?.name}</Badge>
-                            <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name.toUpperCase() || "SIN FILA"}</Badge>
+                            <Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queue?.name.toUpperCase() || "SEM FILA"}</Badge>
                           </Fragment>
                         }
                       />
@@ -310,7 +338,7 @@ const DashboardManage = () => {
     } else {
       return null;
     }
-  }, [ticketNot]);
+  }, [update]);
 
   return (
     <Fragment>

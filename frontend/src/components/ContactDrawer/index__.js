@@ -154,7 +154,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, whatsapp, ticketId, l
 					<Paper square variant="outlined" className={classes.contactHeader}>
 						<Avatar
 							alt={contact.name}
-							src={contact.profilePicUrl}
+							src={contact.urlPicture}
 							className={classes.contactAvatar}
 						></Avatar>
 

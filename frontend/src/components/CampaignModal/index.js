@@ -88,7 +88,7 @@ const CampaignModal = ({
 }) => {
   const classes = useStyles();
   const isMounted = useRef(true);
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const { companyId } = user;
 
   const initialState = {
@@ -117,6 +117,8 @@ const CampaignModal = ({
   const [campaign, setCampaign] = useState(initialState);
   const [whatsapps, setWhatsapps] = useState([]);
   const [selectedWhatsapps, setSelectedWhatsapps] = useState([]);
+  const [whatsappId, setWhatsappId] = useState(false);
+
   const [contactLists, setContactLists] = useState([]);
   const [tagLists, setTagLists] = useState([]);
   const [messageTab, setMessageTab] = useState(0);
@@ -229,6 +231,10 @@ const CampaignModal = ({
         if (data?.queue)
           setSelectedQueue(data.queue.id)
 
+        if (data?.whatsappId) {
+          // const selectedWhatsapps = data.whatsappId.split(",");
+          setWhatsappId(data.whatsappId);
+        }
         setCampaign((prev) => {
           let prevCampaignData = Object.assign({}, prev);
 
@@ -276,7 +282,7 @@ const CampaignModal = ({
     try {
       const dataValues = {
         ...values,  // Merge the existing values object
-        whatsappId: selectedWhatsapps.join(","),
+        whatsappId: whatsappId,
         userId: selectedUser?.id || null,
         queueId: selectedQueue || null
       };
@@ -568,7 +574,7 @@ const CampaignModal = ({
                       </InputLabel>
                       <Field
                         as={Select}
-                        multiple
+                        // multiple
                         label={i18n.t("campaigns.dialog.form.whatsapp")}
                         placeholder={i18n.t("campaigns.dialog.form.whatsapp")}
                         labelId="whatsapp-selection-label"
@@ -577,15 +583,18 @@ const CampaignModal = ({
                         required
                         error={touched.whatsappId && Boolean(errors.whatsappId)}
                         disabled={!campaignEditable}
-                        value={selectedWhatsapps}
-                        onChange={(event) => setSelectedWhatsapps(event.target.value)}
-                        renderValue={(selected) => (
-                          <div>
-                            {selected.map((value) => (
-                              <Chip key={value} label={whatsapps.find((whatsapp) => whatsapp.id === value).name} />
-                            ))}
-                          </div>
-                        )}
+                        value={whatsappId}
+                        onChange={(event) => {
+                          console.log(event.target.value)
+                          setWhatsappId(event.target.value)
+                        }}
+                        // renderValue={(selected) => (
+                        //   <div>
+                        //     {selected.map((value) => (
+                        //       <Chip key={value} label={whatsapps.find((whatsapp) => whatsapp.id === value).name} />
+                        //     ))}
+                        //   </div>
+                        // )}
                       >
                         {whatsapps &&
                           whatsapps.map((whatsapp) => (
@@ -672,6 +681,7 @@ const CampaignModal = ({
                       freeSolo
                       fullWidth
                       autoHighlight
+                      disabled={!campaignEditable || values.openTicket === 'disabled'}
                       noOptionsText={i18n.t("transferTicketModal.noOptions")}
                       loading={loading}
                       renderOption={option => (<span> <UserStatusIcon user={option} /> {option.name}</span>)}
@@ -711,6 +721,7 @@ const CampaignModal = ({
                         onChange={(e) => setSelectedQueue(e.target.value)}
                         label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
                         required={!isNil(selectedUser)}
+                        disabled={!campaignEditable || values.openTicket === 'disabled'}
                       >
                         {queues.map((queue) => (
                           <MenuItem key={queue.id} value={queue.id}>
@@ -743,9 +754,10 @@ const CampaignModal = ({
                         error={
                           touched.statusTicket && Boolean(errors.statusTicket)
                         }
-                        disabled={!campaignEditable}
+                        disabled={!campaignEditable || values.openTicket === 'disabled'}
                       >
                         <MenuItem value={"closed"}>{i18n.t("campaigns.dialog.form.closedTicketStatus")}</MenuItem>
+                        <MenuItem value={"pending"}>{i18n.t("campaigns.dialog.form.pendingTicketStatus")}</MenuItem>
                         <MenuItem value={"open"}>{i18n.t("campaigns.dialog.form.openTicketStatus")}</MenuItem>
                       </Field>
                     </FormControl>

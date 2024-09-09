@@ -77,7 +77,7 @@ export default function Pricing(props) {
   const [connectionsPlans, setConnectionsPlans] = React.useState(3);
   const [storagePlans, setStoragePlans] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
 
   const { getPlanCompany } = usePlans();
 

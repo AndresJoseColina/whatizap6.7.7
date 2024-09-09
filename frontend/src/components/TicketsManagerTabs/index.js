@@ -12,6 +12,7 @@ import {
   Typography,
   Grid,
   Tooltip,
+  Switch,
 } from "@material-ui/core";
 import {
   Group,
@@ -21,13 +22,14 @@ import {
   AccessTime as ClockIcon,
   Search as SearchIcon,
   Add as AddIcon,
+  TextRotateUp,
+  TextRotationDown,
 } from "@material-ui/icons";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import VisibilityOffIcon from "@material-ui/icons/VisibilityOff";
 import ToggleButton from "@material-ui/lab/ToggleButton";
-import PlaylistAddCheckOutlinedIcon from "@mui/icons-material/PlaylistAddCheckOutlined";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
+
+import { FilterAltOff, FilterAlt, PlaylistAddCheckOutlined } from "@mui/icons-material";
 
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
@@ -43,7 +45,6 @@ import { Button, Snackbar } from "@material-ui/core";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { QueueSelectedContext } from "../../context/QueuesSelected/QueuesSelectedContext";
-import { v4 as uuidv4 } from "uuid";
 
 import api from "../../services/api";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
@@ -107,10 +108,10 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: "rgba(0, 0, 0, 0.1)",
     },
 
-    "&$selected": {
-      color: "#FFF",
-      backgroundColor: theme.palette.primary.main,
-    },
+    // "&$selected": {
+    //   color: "#FFF",
+    //   backgroundColor: theme.palette.primary.main,
+    // },
   },
 
   tabPanelItem: {
@@ -123,7 +124,7 @@ const useStyles = makeStyles((theme) => ({
     height: 6,
     bottom: 0,
     borderRadius: "0 0 8px 8px",
-    backgroundColor: theme.mode === "light" ? "#065183" : "#FFF",
+    backgroundColor: theme.mode === "light" ? theme.palette.primary.main : "#FFF",
   },
   tabsBadge: {
     top: "105%",
@@ -132,8 +133,8 @@ const useStyles = makeStyles((theme) => ({
     whiteSpace: "nowrap",
     borderRadius: "12px",
     padding: "0 8px",
-    backgroundColor: theme.mode === "light" ? "#065183" : "#FFF",
-    color: theme.mode === "light" ? "#FFF" : "#065183",
+    backgroundColor: theme.mode === "light" ? theme.palette.primary.main : "#FFF",
+    color: theme.mode === "light" ? "#FFF" : theme.palette.primary.main,
   },
   ticketOptionsBox: {
     display: "flex",
@@ -281,18 +282,18 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 8,
     marginRight: 8,
     "&:hover": {
-      borderColor: theme.mode === "light" ? "#065183" : "#FFF",
+      borderColor: theme.mode === "light" ? theme.palette.primary.main : "#FFF",
     },
   },
   icon: {
     color: "#aaa",
     "&:hover": {
-      color: theme.mode === "light" ? "#065183" : "#FFF",
+      color: theme.mode === "light" ? theme.palette.primary.main : "#FFF",
     },
   },
   buttonOpen: {
     "& $icon": {
-      color: theme.mode === "light" ? "#065183" : "#FFF",
+      color: theme.mode === "light" ? theme.palette.primary.main : "#FFF",
     },
   },
 }));
@@ -304,13 +305,18 @@ const TicketsManagerTabs = () => {
 
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("open");
+  // const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
+  const [sortTickets, setSortTickets] = useState(false);
+
   const searchInputRef = useRef();
+  const [searchOnMessages, setSearchOnMessages] = useState(false);
+
   const { user } = useContext(AuthContext);
   const { profile } = user;
   const { setSelectedQueuesMessage } = useContext(QueueSelectedContext);
+  const { tabOpen, setTabOpen } = useContext(TicketsContext);
 
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -331,8 +337,9 @@ const TicketsManagerTabs = () => {
   const [isHoveredResolve, setIsHoveredResolve] = useState(false);
   const [isHoveredOpen, setIsHoveredOpen] = useState(false);
   const [isHoveredClosed, setIsHoveredClosed] = useState(false);
+  const [isHoveredSort, setIsHoveredSort] = useState(false);
+
   const [isFilterActive, setIsFilterActive] = useState(false);
-  const { setCurrentTicket } = useContext(TicketsContext);
 
   useEffect(() => {
     setSelectedQueuesMessage(selectedQueueIds);
@@ -362,6 +369,7 @@ const TicketsManagerTabs = () => {
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
       setForceSearch(!forceSearch);
+      // setFilter(false);
       setTab("open");
       return;
     } else if (tab !== "search") {
@@ -376,6 +384,7 @@ const TicketsManagerTabs = () => {
   };
 
   const handleBack = () => {
+
     history.push("/tickets");
   };
 
@@ -384,9 +393,9 @@ const TicketsManagerTabs = () => {
   };
 
   const handleChangeTabOpen = (e, newValue) => {
-    if (newValue === "pending" || newValue === "group") {
-      handleBack();
-    }
+    // if (newValue === "pending" || newValue === "group") {
+    handleBack();
+    // }
 
     setTabOpen(newValue);
   };
@@ -417,16 +426,9 @@ const TicketsManagerTabs = () => {
     }
   };
 
-  const handleSelectTicket = (ticket) => {
-    const code = uuidv4();
-    const { id, uuid } = ticket;
-    setCurrentTicket({ id, uuid, code });
-  }
-
   const handleCloseOrOpenTicket = (ticket) => {
     setNewTicketModalOpen(false);
     if (ticket !== undefined && ticket.uuid !== undefined) {
-      handleSelectTicket(ticket);
       history.push(`/tickets/${ticket.uuid}`);
     }
   };
@@ -541,6 +543,15 @@ const TicketsManagerTabs = () => {
           type="search"
           onChange={handleSearch}
         />
+        <Tooltip placement="top" title="Marque para pesquisar também nos conteúdos das mensagens (mais lento)">
+          <div>
+            <Switch
+              size="small"
+              checked={searchOnMessages}
+              onChange={(e) => { setSearchOnMessages(e.target.checked) }}
+            />
+          </div>
+        </Tooltip>
         {/* <IconButton
           className={classes.filterIcon}
           color="primary"
@@ -575,9 +586,9 @@ const TicketsManagerTabs = () => {
           }}
         >
           {isFilterActive ? (
-            <FilterAltIcon className={classes.icon} />
+            <FilterAlt className={classes.icon} />
           ) : (
-            <FilterAltOffIcon className={classes.icon} />
+            <FilterAltOff className={classes.icon} />
           )}
         </IconButton>
       </div>
@@ -730,19 +741,20 @@ const TicketsManagerTabs = () => {
                   className={classes.button}
                   onClick={handleSnackbarOpen}
                 >
-                  <PlaylistAddCheckOutlinedIcon style={{ color: "green" }} />
+                  <PlaylistAddCheckOutlined style={{ color: theme.mode === "light" ? "green" : "#FFF" }} />
                 </IconButton>
               </Badge>
             )}
             <Badge
-              color="primary"
+              // color="primary"
               invisible={
                 !(
                   tab === "open" &&
                   !isHoveredAll &&
                   !isHoveredNew &&
                   !isHoveredResolve &&
-                  !isHoveredClosed
+                  !isHoveredClosed &&
+                  !isHoveredSort
                 ) && !isHoveredOpen
               }
               badgeContent={i18n.t("tickets.inbox.open")}
@@ -762,11 +774,11 @@ const TicketsManagerTabs = () => {
                   width: 30,
                   border: isHoveredOpen
                     ? theme.mode === "light"
-                      ? "3px solid #065183"
+                      ? "3px solid " + theme.palette.primary.main
                       : "3px solid #FFF"
                     : tab === "open"
                       ? theme.mode === "light"
-                        ? "3px solid #065183"
+                        ? "3px solid " + theme.palette.primary.main
                         : "3px solid #FFF"
                       : theme.mode === "light"
                         ? "2px solid #aaa"
@@ -780,11 +792,11 @@ const TicketsManagerTabs = () => {
                   style={{
                     color: isHoveredOpen
                       ? theme.mode === "light"
-                        ? "#065183"
+                        ? theme.palette.primary.main
                         : "#FFF"
                       : tab === "open"
                         ? theme.mode === "light"
-                          ? "#065183"
+                          ? theme.palette.primary.main
                           : "#FFF"
                         : "#aaa",
                   }}
@@ -800,7 +812,8 @@ const TicketsManagerTabs = () => {
                   !isHoveredAll &&
                   !isHoveredNew &&
                   !isHoveredResolve &&
-                  !isHoveredOpen
+                  !isHoveredOpen &&
+                  !isHoveredSort
                 ) && !isHoveredClosed
               }
               badgeContent={i18n.t("tickets.inbox.resolverd")}
@@ -820,11 +833,11 @@ const TicketsManagerTabs = () => {
                   width: 30,
                   border: isHoveredClosed
                     ? theme.mode === "light"
-                      ? "3px solid #065183"
+                      ? "3px solid " + theme.palette.primary.main
                       : "3px solid #FFF"
                     : tab === "closed"
                       ? theme.mode === "light"
-                        ? "3px solid #065183"
+                        ? "3px solid " + theme.palette.primary.main
                         : "3px solid #FFF"
                       : theme.mode === "light"
                         ? "2px solid #aaa"
@@ -838,17 +851,61 @@ const TicketsManagerTabs = () => {
                   style={{
                     color: isHoveredClosed
                       ? theme.mode === "light"
-                        ? "#065183"
+                        ? theme.palette.primary.main
                         : "#FFF"
                       : tab === "closed"
                         ? theme.mode === "light"
-                          ? "#065183"
+                          ? theme.palette.primary.main
                           : "#FFF"
                         : "#aaa",
                   }}
                 />
               </IconButton>
             </Badge>
+            {tab !== "closed" && tab !== "search" && (
+              <Badge
+                color="primary"
+                invisible={
+                  !isHoveredSort ||
+                  isHoveredAll ||
+                  isHoveredNew ||
+                  isHoveredResolve ||
+                  isHoveredOpen ||
+                  isHoveredClosed
+                }
+                badgeContent={!sortTickets ? "Crescente" : "Decrescente"}
+                classes={{ badge: classes.tabsBadge }}
+              >
+                <ToggleButton
+                  onMouseEnter={() => setIsHoveredSort(true)}
+                  onMouseLeave={() => setIsHoveredSort(false)}
+                  className={classes.button}
+                  value="uncheck"
+                  selected={sortTickets}
+                  onChange={() =>
+                    setSortTickets((prevState) => !prevState)
+                  }
+                >
+                  {!sortTickets ? (
+                    <TextRotateUp style={{
+                      color: sortTickets
+                        ? theme.mode === "light"
+                          ? theme.palette.primary.main
+                          : "#FFF"
+                        : "#aaa",
+                    }} />
+                  ) : (
+                    <TextRotationDown style={{
+                      color: sortTickets
+                        ? theme.mode === "light"
+                          ? theme.palette.primary.main
+                          : "#FFF"
+                        : "#aaa",
+                    }} />
+                  )}
+                </ToggleButton>
+              </Badge>
+            )}
           </Grid>
           <Grid item>
             <TicketsQueueSelect
@@ -874,7 +931,7 @@ const TicketsManagerTabs = () => {
                 <Grid item>
                   <Badge
                     overlap="rectangular"
-                    className={classes.badge}
+                    classes={{ badge: classes.customBadge }}
                     badgeContent={openCount}
                     color="primary"
                   >
@@ -940,67 +997,74 @@ const TicketsManagerTabs = () => {
           />
 
           {/* GRUPOS */}
-          <Tab
-            label={
-              <Grid container alignItems="center" justifyContent="center">
-                <Grid item>
-                  <Badge
-                    overlap="rectangular"
-                    classes={{ badge: classes.customBadge }}
-                    badgeContent={groupingCount}
-                    color="primary"
-                  >
-                    <Group
+          {user.allowGroup && (
+            <Tab
+              label={
+                <Grid container alignItems="center" justifyContent="center">
+                  <Grid item>
+                    <Badge
+                      overlap="rectangular"
+                      classes={{ badge: classes.customBadge }}
+                      badgeContent={groupingCount}
+                      color="primary"
+                    >
+                      <Group
+                        style={{
+                          fontSize: 18,
+                        }}
+                      />
+                    </Badge>
+                  </Grid>
+                  <Grid item>
+                    <Typography
                       style={{
-                        fontSize: 18,
+                        marginLeft: 8,
+                        fontSize: 10,
+                        fontWeight: 600,
                       }}
-                    />
-                  </Badge>
+                    >
+                      {i18n.t("ticketsList.groupingHeader")}
+                    </Typography>
+                  </Grid>
                 </Grid>
-                <Grid item>
-                  <Typography
-                    style={{
-                      marginLeft: 8,
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  >
-                    {i18n.t("ticketsList.groupingHeader")}
-                  </Typography>
-                </Grid>
-              </Grid>
-            }
-            value={"group"}
-            name="group"
-            classes={{ root: classes.tabPanelItem }}
-          />
+              }
+              value={"group"}
+              name="group"
+              classes={{ root: classes.tabPanelItem }}
+            />
+          )}
         </Tabs>
 
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
             status="open"
             showAll={showAllTickets}
+            sortTickets={sortTickets ? "ASC" : "DESC"}
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setOpenCount(val)}
             style={applyPanelStyle("open")}
-            handleChangeTab={handleChangeTabOpen}
+            setTabOpen={setTabOpen}
           />
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
+            sortTickets={sortTickets ? "ASC" : "DESC"}
             showAll={user.profile === "admin" || user.allUserChat === 'enabled' ? showAllTickets : false}
             updateCount={(val) => setPendingCount(val)}
             style={applyPanelStyle("pending")}
-            handleChangeTab={handleChangeTabOpen}
+            setTabOpen={setTabOpen}
           />
-          <TicketsList
-            status="group"
-            showAll={showAllTickets}
-            selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setGroupingCount(val)}
-            style={applyPanelStyle("group")}
-            handleChangeTab={handleChangeTabOpen}
-          />
+          {user.allowGroup && (
+            <TicketsList
+              status="group"
+              showAll={showAllTickets}
+              sortTickets={sortTickets ? "ASC" : "DESC"}
+              selectedQueueIds={selectedQueueIds}
+              updateCount={(val) => setGroupingCount(val)}
+              style={applyPanelStyle("group")}
+              setTabOpen={setTabOpen}
+            />
+          )}
         </Paper>
       </TabPanel>
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
@@ -1008,7 +1072,7 @@ const TicketsManagerTabs = () => {
           status="closed"
           showAll={showAllTickets}
           selectedQueueIds={selectedQueueIds}
-          handleChangeTab={handleChangeTabOpen}
+          setTabOpen={setTabOpen}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -1023,6 +1087,7 @@ const TicketsManagerTabs = () => {
               selectedQueueIds={selectedQueueIds}
               whatsappIds={selectedWhatsapp}
               forceSearch={forceSearch}
+              searchOnMessages={searchOnMessages}
               status="search"
             />
           </>
@@ -1037,11 +1102,12 @@ const TicketsManagerTabs = () => {
             selectedQueueIds={selectedQueueIds}
             whatsappIds={selectedWhatsapp}
             forceSearch={forceSearch}
+            searchOnMessages={searchOnMessages}
             status="search"
           />
         )}
       </TabPanel>
-    </Paper>
+    </Paper >
   );
 };
 

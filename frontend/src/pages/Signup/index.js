@@ -95,7 +95,7 @@ const SignUp = () => {
     useEffect(() => {
         setLoading(true);
         const fetchData = async () => {
-            const planList = await getPlanList();
+            const planList = await getPlanList({listPublic: "false"});
 
             setPlans(planList);
             setLoading(false);

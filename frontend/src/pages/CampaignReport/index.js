@@ -23,7 +23,7 @@ import { useDate } from "../../hooks/useDate";
 import usePlans from "../../hooks/usePlans";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -57,7 +57,9 @@ const CampaignReport = () => {
   const [percent, setPercent] = useState(0);
   const [loading, setLoading] = useState(false);
   const mounted = useRef(true);
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
 
   const { datetimeToClient } = useDate();
   const { getPlanCompany } = usePlans();
@@ -68,7 +70,7 @@ const CampaignReport = () => {
       const planConfigs = await getPlanCompany(undefined, companyId);
       if (!planConfigs.plan.useCampaigns) {
         toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
-        setTimeout(() => {          
+        setTimeout(() => {
           history.push(`/`)
         }, 1000);
       }
@@ -119,9 +121,9 @@ const CampaignReport = () => {
 
   useEffect(() => {
     const companyId = user.companyId;
-    const socket = socketConnection({ companyId, userId: user.id });
+    // const socket = socketManager.GetSocket();
 
-    socket.on(`company-${companyId}-campaign`, (data) => {
+    const onCampaignEvent = (data) => {
 
       if (data.record.id === +campaignId) {
         setCampaign(data.record);
@@ -132,10 +134,11 @@ const CampaignReport = () => {
           }, 5000);
         }
       }
-    });
+    };
+    socket.on(`company-${companyId}-campaign`, onCampaignEvent);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company-${companyId}-campaign`, onCampaignEvent);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);

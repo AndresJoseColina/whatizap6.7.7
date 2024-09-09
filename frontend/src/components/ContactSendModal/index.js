@@ -47,7 +47,7 @@ const ContactSendModal = ({ modalOpen, onClose }) => {
   const [newContact, setNewContact] = useState({});
   
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const { companyId, whatsappId } = user;
 
   useEffect(() => {

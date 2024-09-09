@@ -7,13 +7,13 @@ import api from "../../services/api";
 const useStyles = makeStyles(theme => ({
 	messageMedia: {
 		objectFit: "cover",
-		width: "100%",
-		height: 200,
+		width: 250,
+		height: "auto", // Redimensionar automaticamente a altura para manter a proporção
 		borderTopLeftRadius: 8,
 		borderTopRightRadius: 8,
 		borderBottomLeftRadius: 8,
 		borderBottomRightRadius: 8,
-	},
+	}
 }));
 
 const ModalImageCors = ({ imageUrl }) => {
@@ -43,6 +43,7 @@ const ModalImageCors = ({ imageUrl }) => {
 			medium={fetching ? imageUrl : blobUrl}
 			large={fetching ? imageUrl : blobUrl}
 			alt="image"
+			showRotate={true}
 		/>
 	);
 };

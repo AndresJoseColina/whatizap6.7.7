@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 import { Card, Button } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
@@ -26,15 +26,28 @@ const TicketHeader = ({ loading, children }) => {
 	const history = useHistory();
 
 	const handleBack = () => {
+
 		history.push("/tickets");
 	};
+
+	// useEffect(() => {
+	// 	const handleKeyDown = (event) => {
+	// 		if (event.key === "Escape") {
+	// 			handleBack();
+	// 		}
+	// 	};
+	// 	document.addEventListener("keydown", handleKeyDown);
+	// 	return () => {
+	// 		document.removeEventListener("keydown", handleKeyDown);
+	// 	};
+	// }, [history]);
 
 	return (
 		<>
 			{loading ? (
 				<TicketHeaderSkeleton />
 			) : (
-				<Card 
+				<Card
 					square
 					className={classes.ticketHeader}
 				>

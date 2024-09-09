@@ -5,22 +5,19 @@ const TicketsContext = createContext();
 
 const TicketsContextProvider = ({ children }) => {
 	const [currentTicket, setCurrentTicket] = useState({ id: null, code: null });
+	const [tabOpen, setTabOpen] = useState("open");
 	const history = useHistory();
 
 	useEffect(() => {
 		if (currentTicket.id !== null) {
-			if (typeof currentTicket.uuid === "undefined") {
-				history.push(`/tickets`);
-			 } else {
-				history.push(`/tickets/${currentTicket.uuid}`);
-			}
+			history.push(`/tickets/${currentTicket.uuid}`);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [currentTicket])
 
 	return (
 		<TicketsContext.Provider
-			value={{ currentTicket, setCurrentTicket }}
+			value={{ currentTicket, setCurrentTicket, tabOpen, setTabOpen }}
 		>
 			{children}
 		</TicketsContext.Provider>

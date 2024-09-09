@@ -239,8 +239,15 @@ const TicketListItem = ({ ticket }) => {
     const { ticketId } = useParams();
     const isMounted = useRef(true);
     const { user } = useContext(AuthContext);
-    const { setCurrentTicket } = useContext(TicketsContext);
+    const { setCurrentTicket, setTabOpen } = useContext(TicketsContext);
 
+    useEffect(() => {
+        console.log("======== TicketListItemCustom ===========")
+        console.log(ticket)
+        console.log("=========================================")
+    }, [ticket])
+
+    
     useEffect(() => {
         return () => {
             isMounted.current = false;
@@ -263,7 +270,7 @@ const TicketListItem = ({ ticket }) => {
 
         return icon;
     }
-    
+
 
     const handleAcepptTicket = async (ticket) => {
         setLoading(true);
@@ -279,7 +286,6 @@ const TicketListItem = ({ ticket }) => {
         if (isMounted.current) {
             setLoading(false);
         }
-        handleSelectTicket(ticket);
         history.push(`/tickets/${ticket.uuid}`);
     };
 
@@ -315,7 +321,6 @@ const TicketListItem = ({ ticket }) => {
         if (isMounted.current) {
             setLoading(false);
         }
-        handleSelectTicket(ticket);
         history.push(`/tickets/${ticket.uuid}`);
     };
 
@@ -332,8 +337,14 @@ const TicketListItem = ({ ticket }) => {
         if (isMounted.current) {
             setLoading(false);
         }
-        handleSelectTicket(ticket);
         history.push(`/tickets/${ticket.uuid}`);
+    };
+
+    const handleSelectTicket = (ticket) => {
+        const code = uuidv4();
+        const { id, uuid } = ticket;
+        setTabOpen(ticket.status)
+        setCurrentTicket({ id, uuid, code });
     };
 
     const handleClosedTicket = async (ticket) => {
@@ -350,14 +361,7 @@ const TicketListItem = ({ ticket }) => {
             setLoading(false);
         }
     };
-    const handleSelectTicket = (ticket) => {
-        const code = uuidv4();
-        const { id, uuid } = ticket;
-        setCurrentTicket({ id, uuid, code });
-        history.push(`/tickets/${ticket.uuid}`);
 
-    };
-   
     const renderUserName = (name) => {
         let str = name.replace(emojiRegex(), "").trim();
 
@@ -372,8 +376,7 @@ const TicketListItem = ({ ticket }) => {
                 dense
                 button
                 onClick={(e) => {
-                    if (ticket.status === "pending") return;
-                    handleSelectTicket(ticket);
+                    handleSelectTicket(ticket)
                 }}
                 selected={ticketId && +ticketId === ticket.id}
                 className={clsx(classes.ticket, {
@@ -512,7 +515,7 @@ const TicketListItem = ({ ticket }) => {
                         <CheckIcon />
                     </IconButton>
                 )}
-                {ticket.status === "pending" && (
+                {/* {ticket.status === "pending" && (
                     <IconButton
                         className={classes.bottomButton}
                         color="primary"
@@ -520,14 +523,14 @@ const TicketListItem = ({ ticket }) => {
                     >
                         <VisibilityIcon />
                     </IconButton>
-                )}
+                )} */}
                 <div className={classes.divTags}>
                     {ticket.isGroup && (
                         <div className={classes.tagsWrapper}>
                             <div
-                                key={ticket.isGroup}
+                                key={ticket.id}
                                 className={classes.tags}
-                                title={ticket.isGroup}
+                                // title={ticket.isGroup}
                                 style={{
                                     backgroundColor: "#7C7C7C",
                                 }}

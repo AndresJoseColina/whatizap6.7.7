@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import "emoji-mart/css/emoji-mart.css";
 import { Picker } from "emoji-mart";
-import { useMediaQuery } from '@material-ui/core';
+import { useMediaQuery, useTheme } from '@material-ui/core';
 import { isNil } from "lodash";
 import {
   CircularProgress,
@@ -38,6 +38,7 @@ import {
   Person,
   Reply,
   Duo,
+  Timer,
 } from "@material-ui/icons";
 import AddIcon from "@material-ui/icons/Add";
 import { CameraAlt } from "@material-ui/icons";
@@ -59,6 +60,9 @@ import axios from "axios";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
 import { ForwardMessageContext } from "../../context/ForwarMessage/ForwardMessageContext";
 import MessageUploadMedias from "../MessageUploadMedias";
+import { EditMessageContext } from "../../context/EditingMessage/EditingMessageContext";
+import ScheduleModal from "../ScheduleModal";
+import { useParams } from "react-router-dom/cjs/react-router-dom.min";
 
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
@@ -336,10 +340,10 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, ticketChannel }) => {
+const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketChannel }) => {
 
   const classes = useStyles();
-  const [medias, setMedias] = useState([]);
+  const theme = useTheme();
   const [mediasUpload, setMediasUpload] = useState([]);
   const isMounted = useRef(true);
 
@@ -353,7 +357,10 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
   const [onDragEnter, setOnDragEnter] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } = useContext(ReplyMessageContext);
+  const { setEditingMessage, editingMessage } = useContext(EditMessageContext);
   const { user } = useContext(AuthContext);
+  const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+
   const [signMessagePar, setSignMessagePar] = useState(false);
   const { get: getSetting } = useCompanySettings();
   const [signMessage, setSignMessage] = useState(true);
@@ -405,25 +412,29 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
 
   useEffect(() => {
     inputRef.current.focus();
-  }, [replyingMessage]);
+    if (editingMessage) {
+      setInputMessage(editingMessage.body);
+    }
+  }, [replyingMessage, editingMessage]);
 
   useEffect(() => {
     inputRef.current.focus();
     return () => {
       setInputMessage("");
       setShowEmoji(false);
-      setMedias([]);
       setMediasUpload([]);
       setReplyingMessage(null);
       //setSignMessage(true);
       setPrivateMessage(false);
       setPrivateMessageInputVisible(false)
+      setEditingMessage(null);
     };
-  }, [ticketId]);
+  }, [ticketId, setReplyingMessage, setEditingMessage]);
 
   useEffect(() => {
     setTimeout(() => {
-      setOnDragEnter(false);
+      if (isMounted.current)
+        setOnDragEnter(false);
     }, 1000);
     // eslint-disable-next-line
   }, [onDragEnter === true]);
@@ -435,19 +446,20 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
         "column": "sendSignMessage"
       });
 
-
-      if (setting.sendSignMessage === "enabled") {
-        setSignMessagePar(true);
-        const signMessageStorage = JSON.parse(
-          localStorage.getItem("persistentSignMessage")
-        );
-        if (isNil(signMessageStorage)) {
-          setSignMessage(true)
+      if (isMounted.current) {
+        if (setting.sendSignMessage === "enabled") {
+          setSignMessagePar(true);
+          const signMessageStorage = JSON.parse(
+            localStorage.getItem("persistentSignMessage")
+          );
+          if (isNil(signMessageStorage)) {
+            setSignMessage(true)
+          } else {
+            setSignMessage(signMessageStorage);
+          }
         } else {
-          setSignMessage(signMessageStorage);
+          setSignMessagePar(false);
         }
-      } else {
-        setSignMessagePar(false);
       }
     };
     fetchSettings();
@@ -458,7 +470,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
   }
 
   const handleSendLinkVideo = async () => {
-    const link = `https://meet.jit.si/${currentTicketId}`;
+    const link = `https://meet.jit.si/${ticketId}`;
     setInputMessage(link);
   }
 
@@ -564,7 +576,6 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
   };
 
   const handleUploadMedia = async (mediasUpload) => {
-    console.log(mediasUpload)
     setLoading(true);
     // e.preventDefault();
 
@@ -577,11 +588,10 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
 
     const formData = new FormData();
     formData.append("fromMe", true);
+    formData.append("isPrivate", privateMessage ? "true" : "false");
     mediasUpload.forEach((media) => {
+      formData.append("body", media.caption);
       formData.append("medias", media.file);
-      privateMessage
-        ? formData.append("body", `\u200d`)
-        : formData.append("body", media.caption);
     });
 
     try {
@@ -591,7 +601,6 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
     }
 
     setLoading(false);
-    setMedias([]);
     setMediasUpload([]);
     setShowModalMedias(false);
     setPrivateMessage(false);
@@ -613,7 +622,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
       mediaUrl: "",
       body: null,
       quotedMsg: replyingMessage,
-      isPrivate: privateMessage,
+      isPrivate: privateMessage ? "true" : "false",
       vCard: vcard,
     };
     try {
@@ -626,8 +635,9 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
     setShowEmoji(false);
     setLoading(false);
     setReplyingMessage(null);
+    setEditingMessage(null);
     setPrivateMessage(false);
-    setPrivateMessageInputVisible(false)
+    setPrivateMessageInputVisible(false);
   };
 
   const handleSendMessage = async () => {
@@ -636,7 +646,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
     setLoading(true);
 
     const userName = privateMessage
-      ? `${user.name} - Mensaje Privado`
+      ? `${user.name} - Mensagem Privada`
       : user.name;
 
     const sendMessage = inputMessage.trim();
@@ -645,15 +655,19 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
       read: 1,
       fromMe: true,
       mediaUrl: "",
-      body: signMessage || privateMessage
+      body: (signMessage || privateMessage) && !editingMessage
         ? `*${userName}:*\n${sendMessage}`
         : sendMessage,
       quotedMsg: replyingMessage,
-      isPrivate: privateMessage,
+      isPrivate: privateMessage ? "true" : "false",
     };
 
     try {
-      await api.post(`/messages/${ticketId}`, message);
+      if (editingMessage !== null) {
+        await api.post(`/messages/edit/${editingMessage.id}`, message);
+      } else {
+        await api.post(`/messages/${ticketId}`, message);
+      }
     } catch (err) {
       toastError(err);
     }
@@ -663,6 +677,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
     setLoading(false);
     setReplyingMessage(null);
     setPrivateMessage(false);
+    setEditingMessage(null);
     setPrivateMessageInputVisible(false)
     handleMenuItemClick();
   };
@@ -695,8 +710,10 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
           mediaPath: m.mediaPath,
         };
       });
+      if (isMounted.current) {
 
-      setQuickAnswer(options);
+        setQuickAnswer(options);
+      }
     }
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -836,7 +853,6 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
   };
 
   const handleCancelSelection = () => {
-    setMedias([]);
     setMediasUpload([]);
     setShowModalMedias(false);
   };
@@ -850,20 +866,27 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
               [classes.replyginSelfMsgSideColor]: !message.fromMe,
             })}
           ></span>
-          <div className={classes.replyginMsgBody}>
-            {!message.fromMe && (
-              <span className={classes.messageContactName}>
-                {message.contact?.name}
-              </span>
-            )}
-            {message.body}
-          </div>
+          {replyingMessage && (
+            <div className={classes.replyginMsgBody}>
+              {!message.fromMe && (
+                <span className={classes.messageContactName}>
+                  {message.contact?.name}
+                </span>
+              )}
+              {message.body}
+            </div>
+          )
+          }
         </div>
         <IconButton
           aria-label="showRecorder"
           component="span"
           disabled={disableOption()}
-          onClick={() => setReplyingMessage(null)}
+          onClick={() => {
+            setReplyingMessage(null);
+            setEditingMessage(null);
+            setInputMessage("");
+          }}
         >
           <Clear className={classes.sendMessageIcons} />
         </IconButton>
@@ -919,7 +942,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
           onDragEnter={() => setOnDragEnter(true)}
           onDrop={(e) => handleInputDrop(e)}
         >
-          {replyingMessage && renderReplyingMessage(replyingMessage)}
+          {(replyingMessage && renderReplyingMessage(replyingMessage)) || (editingMessage && renderReplyingMessage(editingMessage))}
           <div className={classes.newMessageBox}>
             <Hidden only={["sm", "xs"]}>
               <IconButton
@@ -1037,7 +1060,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
                     onClick={handleChangeSign}
                   >
                     {signMessage === true ? (
-                      <Create style={{ color: "#065183" }} />
+                      <Create style={{ color: theme.mode === "light" ? theme.palette.primary.main : "#EEE" }} />
                     ) : (
                       <Create style={{ color: "grey" }} />
                     )}
@@ -1051,7 +1074,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
                   onClick={handlePrivateMessage}
                 >
                   {privateMessage === true ? (
-                    <Comment style={{ color: "#065183" }} />
+                    <Comment style={{ color: theme.mode === "light" ? theme.palette.primary.main : "#EEE" }} />
                   ) : (
                     <Comment style={{ color: "grey" }} />
                   )}
@@ -1119,7 +1142,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
                       onClick={handleChangeSign}
                     >
                       {signMessage === true ? (
-                        <Create style={{ color: "#065183" }} />
+                        <Create style={{ color: theme.mode === "light" ? theme.palette.primary.main : "#EEE" }} />
                       ) : (
                         <Create style={{ color: "grey" }} />
                       )}
@@ -1133,7 +1156,7 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
                     onClick={handlePrivateMessage}
                   >
                     {privateMessage === true ? (
-                      <Comment style={{ color: "#065183" }} />
+                      <Comment style={{ color: theme.mode === "light" ? theme.palette.primary.main : "#EEE" }} />
                     ) : (
                       <Comment style={{ color: "grey" }} />
                     )}
@@ -1246,6 +1269,16 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
             </div>
             {!privateMessageInputVisible && (
               <>
+                <Tooltip title={i18n.t("tickets.buttons.scredule")}>
+                  <IconButton
+                    aria-label="scheduleMessage"
+                    component="span"
+                    onClick={() => setAppointmentModalOpen(true)}
+                    disabled={loading}
+                  >
+                    <Timer className={classes.sendMessageIcons} />
+                  </IconButton>
+                </Tooltip>
                 {inputMessage || showSelectMessageCheckbox ? (
                   <>
                     <IconButton
@@ -1311,6 +1344,14 @@ const MessageInput = ({ ticketId, ticketStatus, currentTicketId, droppedFiles, t
                     <Reply className={classes.ForwardMessageIcons} /> : <Send className={classes.sendMessageIcons} />}
                 </IconButton>
               </>
+            )}
+            {appointmentModalOpen && (
+              <ScheduleModal
+                open={appointmentModalOpen}
+                onClose={() => setAppointmentModalOpen(false)}
+                message={inputMessage}
+                contactId={contactId}
+              />
             )}
           </div>
         </Paper>

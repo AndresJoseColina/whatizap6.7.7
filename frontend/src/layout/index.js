@@ -1,10 +1,10 @@
 import React, { useState, useContext, useEffect, useMemo } from "react";
 import clsx from "clsx";
-import moment from "moment";
+// import moment from "moment";
 
-import { isNill } from "lodash";
-import SoftPhone from "react-softphone";
-import { WebSocketInterface } from "jssip";
+// import { isNill } from "lodash";
+// import SoftPhone from "react-softphone";
+// import { WebSocketInterface } from "jssip";
 
 import {
   makeStyles,
@@ -20,7 +20,7 @@ import {
   useTheme,
   useMediaQuery,
   Avatar,
-  FormControl,
+  // FormControl,
   Badge,
   withStyles,
   Chip,
@@ -28,9 +28,9 @@ import {
 
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import AccountCircle from "@material-ui/icons/AccountCircle";
+// import AccountCircle from "@material-ui/icons/AccountCircle";
 import CachedIcon from "@material-ui/icons/Cached";
-import whatsappIcon from "../assets/nopicture.png";
+// import whatsappIcon from "../assets/nopicture.png";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
@@ -38,23 +38,26 @@ import NotificationsVolume from "../components/NotificationsVolume";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-import DarkMode from "../components/DarkMode";
+// import DarkMode from "../components/DarkMode";
 import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 
 import logo from "../assets/logo.png";
-import { socketConnection } from "../services/socket";
+import logoDark from "../assets/logo-black.png";
 import ChatPopover from "../pages/Chat/ChatPopover";
 
 import { useDate } from "../hooks/useDate";
-import UserLanguageSelector from "../components/UserLanguageSelector";
+// import UserLanguageSelector from "../components/UserLanguageSelector";
 
-import ColorModeContext from "../layout/themeContext";
+import ColorModeContext from "./themeContext";
 import Brightness4Icon from "@material-ui/icons/Brightness4";
 import Brightness7Icon from "@material-ui/icons/Brightness7";
 import { getBackendUrl } from "../config";
 import useSettings from "../hooks/useSettings";
+import VersionControl from "../components/VersionControl";
+
+// import { SocketContext } from "../context/Socket/SocketContext";
 
 const backendUrl = getBackendUrl();
 
@@ -69,14 +72,14 @@ const useStyles = makeStyles((theme) => ({
     },
     backgroundColor: theme.palette.fancyBackground,
     "& .MuiButton-outlinedPrimary": {
-      color: theme.mode === "light" ? "#065183" : "#FFF",
+      color: theme.palette.primary,
       border:
         theme.mode === "light"
           ? "1px solid rgba(0 124 102)"
           : "1px solid rgba(255, 255, 255, 0.5)",
     },
     "& .MuiTab-textColorPrimary.Mui-selected": {
-      color: theme.mode === "light" ? "#065183" : "#FFF",
+      color: theme.palette.primary,
     },
   },
   chip: {
@@ -94,7 +97,7 @@ const useStyles = makeStyles((theme) => ({
   toolbarIcon: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "center",
     // backgroundColor: "#FFF",
     backgroundSize: "cover",
     padding: "0 8px",
@@ -121,9 +124,9 @@ const useStyles = makeStyles((theme) => ({
       display: "none",
     },
   },
-  menuButton: {
-    marginRight: 36,
-  },
+  // menuButton: {
+  //   marginRight: 36,
+  // },
   menuButtonHidden: {
     display: "none",
   },
@@ -135,15 +138,19 @@ const useStyles = makeStyles((theme) => ({
   drawerPaper: {
     position: "relative",
     whiteSpace: "nowrap",
+    // overflowX: "hidden",
     width: drawerWidth,
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
     }),
+    overflowX: "hidden",
+    overflowY: "hidden",
   },
 
   drawerPaperClose: {
     overflowX: "hidden",
+    overflowY: "hidden",
     transition: theme.transitions.create("width", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
@@ -165,24 +172,32 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing(4),
     paddingBottom: theme.spacing(4),
   },
-  paper: {
-    padding: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column",
-  },
+  // paper: {
+  //     padding: theme.spacing(2),
+  //     display: "flex",
+  //     overflow: "auto",
+  //     flexDirection: "column",
+  //   },
   containerWithScroll: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    // padding: theme.spacing(1),
+    overflowY: "scroll", // Use "auto" para mostrar a barra de rolagem apenas quando necessário
+    overflowX: "hidden", // Oculta a barra de rolagem horizontal
     ...theme.scrollbarStyles,
+    borderRadius: "8px",
+    border: "2px solid transparent",
+    "&::-webkit-scrollbar": {
+      display: "none",
+    },
+    "-ms-overflow-style": "none",
+    "scrollbar-width": "none",
   },
   NotificationsPopOver: {
     // color: theme.barraSuperior.secondary.main,
   },
   logo: {
     width: "100%",
-    height: "48px",
+    height: "45px",
     maxWidth: 180,
     [theme.breakpoints.down("sm")]: {
       width: "auto",
@@ -190,6 +205,10 @@ const useStyles = makeStyles((theme) => ({
       maxWidth: 180,
     },
     logo: theme.logo,
+    content: "url(" + (theme.mode === "light" ? theme.calculatedLogoLight() : theme.calculatedLogoDark()) + ")"
+  },
+  hideLogo: {
+    display: "none",
   },
   avatar2: {
     width: theme.spacing(4),
@@ -254,7 +273,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   // const [dueDate, setDueDate] = useState("");
-  const { user } = useContext(AuthContext);
+  //   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
   const theme = useTheme();
   const { colorMode } = useContext(ColorModeContext);
   const greaterThenSm = useMediaQuery(theme.breakpoints.up("sm"));
@@ -272,94 +293,30 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
   const settings = useSettings();
 
-  const config = {
-    domain: "192.168.2.4", // sip-server@your-domain.io
-    uri: "sip:202@192.168.2.4", // sip:sip-user@your-domain.io
-    password: "btelefonia12", //  PASSWORD ,
-    ws_servers: "wss://202@192.168.2.4:8089/ws", //ws server
-    sockets: new WebSocketInterface("wss://192.168.2.4:8089/ws"),
-    display_name: "202", //jssip Display Name
-    websocket_url: "wss://192.168.2.4:443",
-    sip_outbound_ur: "udp://192.168.2.4:5060",
-    debug: true, // Turn debug messages on
-  };
-  const setConnectOnStartToLocalStorage = (newValue) => {
-    // Handle save the auto connect value to local storage
-    return true;
-  };
-  const setNotifications = (newValue) => {
-    // Handle save the Show notifications of an incoming call to local storage
-    return true;
-  };
-  const setCallVolume = (newValue) => {
-    // Handle save the call Volume value to local storage
-    return true;
-  };
-  const setRingVolume = (newValue) => {
-    // Handle save the Ring Volume value to local storage
-    return true;
-  };
-  //################### CODIGOS DE TESTE #########################################
-  // useEffect(() => {
-  //   navigator.getBattery().then((battery) => {
-  //     console.log(`Battery Charging: ${battery.charging}`);
-  //     console.log(`Battery Level: ${battery.level * 100}%`);
-  //     console.log(`Charging Time: ${battery.chargingTime}`);
-  //     console.log(`Discharging Time: ${battery.dischargingTime}`);
-  //   })
-  // }, []);
-
-  // useEffect(() => {
-  //   const geoLocation = navigator.geolocation
-
-  //   geoLocation.getCurrentPosition((position) => {
-  //     let lat = position.coords.latitude;
-  //     let long = position.coords.longitude;
-
-  //     console.log('latitude: ', lat)
-  //     console.log('longitude: ', long)
-  //   })
-  // }, []);
-
-  // useEffect(() => {
-  //   const nucleos = window.navigator.hardwareConcurrency;
-
-  //   console.log('Nucleos: ', nucleos)
-  // }, []);
-
-  // useEffect(() => {
-  //   console.log('userAgent', navigator.userAgent)
-  //   if (
-  //     navigator.userAgent.match(/Android/i)
-  //     || navigator.userAgent.match(/webOS/i)
-  //     || navigator.userAgent.match(/iPhone/i)
-  //     || navigator.userAgent.match(/iPad/i)
-  //     || navigator.userAgent.match(/iPod/i)
-  //     || navigator.userAgent.match(/BlackBerry/i)
-  //     || navigator.userAgent.match(/Windows Phone/i)
-  //   ) {
-  //     console.log('é mobile ', true) //celular
-  //   }
-  //   else {
-  //     console.log('não é mobile: ', false) //nao é celular
-  //   }
-  // }, []);
-  //##############################################################################
-
   useEffect(() => {
     const getSetting = async () => {
       const response = await settings.get("wtV");
+
+
       if (response) {
-        setUserToken(response.value);
+
+        setUserToken("disabled");
+
       } else {
-        setUserToken("enabled");
+        setUserToken("disabled");
       }
     };
 
     getSetting();
   });
 
+  
+
   useEffect(() => {
+    // if (localStorage.getItem("public-token") === null) {
+    //   handleLogout()
+    // }
+
     if (document.body.offsetWidth > 600) {
       if (user.defaultMenu === "closed") {
         setDrawerOpen(false);
@@ -368,9 +325,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       }
     }
     if (user.defaultTheme === "dark" && theme.mode === "light") {
-      toggleColorMode();
+      colorMode.toggleColorMode();
     }
-  }, [user]);
+  }, [user.defaultMenu, document.body.offsetWidth]);
 
   useEffect(() => {
     if (document.body.offsetWidth < 600) {
@@ -381,11 +338,12 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   }, [drawerOpen]);
 
   useEffect(() => {
+
     const companyId = user.companyId;
     const userId = user.id;
-
     if (companyId) {
-      const socket = socketConnection({ companyId, userId: user.id });
+      //    const socket = socketManager.GetSocket();
+
       const ImageUrl = user.profileImage;
       if (ImageUrl !== undefined && ImageUrl !== null)
         setProfileUrl(
@@ -393,7 +351,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         );
       else setProfileUrl(`${process.env.FRONTEND_URL}/nopicture.png`);
 
-      socket.on(`company-${companyId}-auth`, (data) => {
+      const onCompanyAuthLayout = (data) => {
         if (data.user.id === +userId) {
           toastError("Sua conta foi acessada em outro computador.");
           setTimeout(() => {
@@ -401,7 +359,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             window.location.reload();
           }, 1000);
         }
-      });
+      }
+
+      socket.on(`company-${companyId}-auth`, onCompanyAuthLayout);
 
       socket.emit("userStatus");
       const interval = setInterval(() => {
@@ -409,12 +369,12 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       }, 1000 * 60 * 5);
 
       return () => {
-        socket.disconnect();
+        socket.off(`company-${companyId}-auth`, onCompanyAuthLayout);
         clearInterval(interval);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [socket]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -432,7 +392,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   };
 
   const handleClickLogout = () => {
-    if (theme.mode === "dark") toggleColorMode();
     handleCloseMenu();
     handleLogout();
   };
@@ -454,10 +413,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
     }
   };
 
-  const toggleColorMode = () => {
-    colorMode.toggleColorMode();
-  };
-
   if (loading) {
     return <BackdropLoading />;
   }
@@ -476,23 +431,21 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         open={drawerOpen}
       >
         <div className={classes.toolbarIcon}>
-          <img
-            src={logo}
+          <img className={drawerOpen ? classes.logo : classes.hideLogo}
             style={{
               display: "block",
               margin: "0 auto",
               height: "50px",
               width: "100%",
             }}
-            alt="logo"
-          />
+            alt="logo" />
           <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
             <ChevronLeftIcon />
           </IconButton>
         </div>
         <List className={classes.containerWithScroll}>
-          {mainListItems}
-          {/* <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} /> */}
+          {/* {mainListItems} */}
+          <MainListItems collapsed={!drawerOpen} />
         </List>
         <Divider />
       </Drawer>
@@ -509,10 +462,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             aria-label="open drawer"
             style={{ color: "white" }}
             onClick={() => setDrawerOpen(!drawerOpen)}
-            className={clsx(
-              classes.menuButton,
-              drawerOpen && classes.menuButtonHidden
-            )}
+            className={clsx(drawerOpen && classes.menuButtonHidden)}
           >
             <MenuIcon />
           </IconButton>
@@ -526,8 +476,8 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           >
             {/* {greaterThenSm && user?.profile === "admin" && getDateAndDifDays(user?.company?.dueDate).difData < 7 ? ( */}
             {greaterThenSm &&
-            user?.profile === "admin" &&
-            user?.company?.dueDate ? (
+              user?.profile === "admin" &&
+              user?.company?.dueDate ? (
               <>
                 {i18n.t("mainDrawer.appBar.user.message")} <b>{user.name}</b>,{" "}
                 {i18n.t("mainDrawer.appBar.user.messageEnd")}{" "}
@@ -543,18 +493,16 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               </>
             )}
           </Typography>
-		  
 
-         {/* DESABILITADO POIS TEM BUGS
-		 {userToken === "enabled" && user?.companyId === 1 && (
+          {userToken === "enabled" && user?.companyId === 1 && (
             <Chip
               className={classes.chip}
               label={i18n.t("mainDrawer.appBar.user.token")}
             />
           )}
-            */}
-			
-			
+          <VersionControl />
+
+          {/* DESABILITADO POIS TEM BUGS */}
           {/* <UserLanguageSelector /> */}
           {/* <SoftPhone
             callVolume={33} //Set Default callVolume
@@ -568,7 +516,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             setRingVolume={setRingVolume} // Callback function
             timelocale={'UTC-3'} //Set time local for call history
           /> */}
-          <IconButton edge="start" onClick={toggleColorMode}>
+          <IconButton edge="start" onClick={colorMode.toggleColorMode}>
             {theme.mode === "dark" ? (
               <Brightness7Icon style={{ color: "white" }} />
             ) : (
@@ -605,7 +553,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
               onClick={handleMenu}
             >
               <Avatar
-                alt="Whaticket"
+                alt="Multi100"
                 className={classes.avatar2}
                 src={profileUrl}
               />

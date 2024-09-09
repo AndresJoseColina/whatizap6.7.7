@@ -30,6 +30,7 @@ import { Can } from "../Can";
 import { Avatar, Grid, Input, Paper, Tab, Tabs } from "@material-ui/core";
 import { getBackendUrl } from "../../config";
 import TabPanel from "../TabPanel";
+import AvatarUploader from "../AvatarUpload";
 
 const backendUrl = getBackendUrl();
 const path = require('path');
@@ -135,7 +136,9 @@ const UserModal = ({ open, onClose, userId }) => {
 		allHistoric: "disabled",
 		allUserChat: "disabled",
 		userClosePendingTicket: "enabled",
-		showDashboard: "disabled"
+		showDashboard: "disabled",
+		allowRealTime: "disabled",
+		allowConnections: "disabled",
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -147,7 +150,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	const { loading, whatsApps } = useWhatsApps();
 	const [profileUrl, setProfileUrl] = useState(null)
 	const [tab, setTab] = useState("general");
-
+	const [avatar, setAvatar] = useState(null);
 	const startWorkRef = useRef();
 	const endWorkRef = useRef();
 
@@ -186,52 +189,51 @@ const UserModal = ({ open, onClose, userId }) => {
 		setTab(newValue);
 	};
 
-	const handleSaveUser = async values => {
+	const handleSaveUser = async (values) => {
+
 		const uploadAvatar = async (file) => {
 			const formData = new FormData();
 			formData.append('userId', file.id);
 			formData.append('typeArch', "user");
-			formData.append('profileImage', file.profileImage);
+			formData.append('profileImage', avatar);
 
 			const { data } = await api.post(`/users/${file.id}/media-upload`, formData);
 
 			localStorage.setItem("profileImage", data.user.profileImage);
 
 		}
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds };
+
+
+
+		const userData = {
+			...values,
+			whatsappId,
+			queueIds: selectedQueueIds
+		};
+		console.log("userData", userData)
 		try {
 			if (userId) {
 				const { data } = await api.put(`/users/${userId}`, userData);
-				console.log(user, profileUrl, data)
-				window.localStorage.setItem("preferredTheme", values.defaultTheme);
-
-				if (user.profileImage && user.profileImage !== path.basename(profileUrl))
-					uploadAvatar(user)
+				console.log("avatar", avatar, user?.profileImage, avatar?.name)
+				if (avatar && (!user?.profileImage || !user?.profileImage !== avatar.name))// getBasename(avatar)))
+					uploadAvatar(data)
 			} else {
-				const { data } = await api.post("/users", userData);
-				window.localStorage.setItem("preferredTheme", values.defaultTheme);
+				await api.post("/users", userData);
 
-				if (user.profileImage && user.avatar)
+				if (!user?.profileImage && avatar)
 					uploadAvatar(user)
 			}
-
-			toast.success(i18n.t("userModal.success"));
+			if (userId === loggedInUser.id) {
+				handleClose();
+				toast.success(i18n.t("userModal.success"));
+				window.location.reload(	);
+			} else {
+				handleClose();
+				toast.success(i18n.t("userModal.success"));
+			}
 		} catch (err) {
 			toastError(err);
 		}
-		handleClose();
-	};
-
-	const handleUpdateProfileImage = (e) => {
-		if (!e.target.files[0]) return;
-
-		const newAvatarUrl = URL.createObjectURL(e.target.files[0]);
-		setUser(prevState => ({
-			...prevState,
-			avatar: newAvatarUrl,
-			profileImage: e.target.files[0]
-		}));
-		setProfileUrl(newAvatarUrl);
 	};
 
 	return (
@@ -259,7 +261,7 @@ const UserModal = ({ open, onClose, userId }) => {
 						}, 400);
 					}}
 				>
-					{({ touched, errors, isSubmitting }) => (
+					{({ touched, errors, isSubmitting, setFieldValue }) => (
 						<Form>
 							<Paper className={classes.mainPaper} elevation={1}>
 								<Tabs
@@ -289,38 +291,19 @@ const UserModal = ({ open, onClose, userId }) => {
 											alignItems="center"
 											justifyContent="center">
 											<FormControl className={classes.updateDiv}>
-												<label htmlFor="profileImage">
-													<Avatar
-														src={profileUrl ? profileUrl : whatsappIcon}
-														alt="profile-image"
-														className={`${classes.avatar} ${touched.profileImage && errors.profileImage ? classes.errorUpdate : ''}`}
-													/>
-												</label>
-												<FormControl className={classes.updateDiv}>
-													<label htmlFor="profileImage"
-														className={`${classes.updateLabel} ${touched.profileImage && errors.profileImage ? classes.errorUpdate : ''}`}
-													>
-														{profileUrl ? i18n.t("userModal.title.updateImage") : i18n.t("userModal.buttons.addImage")}
-													</label>
-													{
-														touched.profileImage && errors.profileImage && (
-															<span className={classes.errorText}>{errors.profileImage}</span>)
-													}
-													<Input
-														type="file"
-														name="profileImage"
-														id="profileImage"
-														className={classes.updateInput}
-														onChange={event => handleUpdateProfileImage(event)}
-													/>
-												</FormControl>
-												{user.avatar &&
+												<AvatarUploader
+													setAvatar={setAvatar}
+													avatar={user.profileImage}
+													companyId={user.companyId}
+												/>
+												{user.profileImage &&
 													<Button
 														variant="outlined"
 														color="secondary"
 														onClick={() => {
-															setUser(prevState => ({ ...prevState, avatar: null, profileImage: null }));
-															setProfileUrl(whatsappIcon);
+															user.profileImage = null;
+															setFieldValue("profileImage", null);
+															setAvatar(null);
 														}}
 													>
 														{i18n.t("userModal.title.removeImage")}
@@ -698,6 +681,58 @@ const UserModal = ({ open, onClose, userId }) => {
 															>
 																<>
 																	<InputLabel >
+																		{i18n.t("userModal.form.userClosePendingTicket")}
+																	</InputLabel>
+
+																	<Field
+																		as={Select}
+																		label={i18n.t("userModal.form.userClosePendingTicket")}
+																		name="userClosePendingTicket"
+																		type="userClosePendingTicket"
+																		required
+																	>
+																		<MenuItem value="disabled">{i18n.t("userModal.form.allHistoricDisabled")}</MenuItem>
+																		<MenuItem value="enabled">{i18n.t("userModal.form.allHistoricEnabled")}</MenuItem>
+																	</Field>
+																</>
+															</FormControl>
+														</Grid>
+														<Grid item xs={12} md={6} xl={6}>
+															<FormControl
+																variant="outlined"
+																className={classes.maxWidth}
+																margin="dense"
+																fullWidth
+															>
+																<>
+																	<InputLabel >
+																		{i18n.t("userModal.form.allowConnections")}
+																	</InputLabel>
+
+																	<Field
+																		as={Select}
+																		label={i18n.t("userModal.form.allowConnections")}
+																		name="allowConnections"
+																		type="allowConnections"
+																		required
+																	>
+																		<MenuItem value="disabled">{i18n.t("userModal.form.allHistoricDisabled")}</MenuItem>
+																		<MenuItem value="enabled">{i18n.t("userModal.form.allHistoricEnabled")}</MenuItem>
+																	</Field>
+																</>
+															</FormControl>
+														</Grid>
+													</Grid>
+													<Grid container spacing={1}>
+														<Grid item xs={12} md={6} xl={6}>
+															<FormControl
+																variant="outlined"
+																className={classes.maxWidth}
+																margin="dense"
+																fullWidth
+															>
+																<>
+																	<InputLabel >
 																		{i18n.t("userModal.form.showDashboard")}
 																	</InputLabel>
 
@@ -715,7 +750,6 @@ const UserModal = ({ open, onClose, userId }) => {
 															</FormControl>
 														</Grid>
 														<Grid item xs={12} md={6} xl={6}>
-
 															<FormControl
 																variant="outlined"
 																className={classes.maxWidth}
@@ -724,14 +758,14 @@ const UserModal = ({ open, onClose, userId }) => {
 															>
 																<>
 																	<InputLabel >
-																		{i18n.t("userModal.form.userClosePendingTicket")}
+																		{i18n.t("userModal.form.allowRealTime")}
 																	</InputLabel>
 
 																	<Field
 																		as={Select}
-																		label={i18n.t("userModal.form.userClosePendingTicket")}
-																		name="userClosePendingTicket"
-																		type="userClosePendingTicket"
+																		label={i18n.t("userModal.form.allowRealTime")}
+																		name="allowRealTime"
+																		type="allowRealTime"
 																		required
 																	>
 																		<MenuItem value="disabled">{i18n.t("userModal.form.allHistoricDisabled")}</MenuItem>

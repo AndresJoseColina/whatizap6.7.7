@@ -20,6 +20,7 @@ import EditIcon from "@material-ui/icons/Edit";
 import HelpOutlineOutlinedIcon from "@material-ui/icons/HelpOutlineOutlined";
 import { i18n } from "../../translate/i18n";
 import Switch from "@material-ui/core/Switch";
+import { isArray } from "lodash";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -44,6 +45,9 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import Autocomplete, { createFilterOptions } from "@material-ui/lab/Autocomplete";
 import useQueues from "../../hooks/useQueues";
 import UserStatusIcon from "../UserModal/statusIcon";
+import usePlans from "../../hooks/usePlans";
+import ColorBoxModal from "../ColorBoxModal";
+// import { ColorBox } from "material-ui-color";
 
 
 const useStyles = makeStyles((theme) => ({
@@ -144,7 +148,7 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
   const [schedulesEnabled, setSchedulesEnabled] = useState(false);
   const [tab, setTab] = useState(0);
   const [file, setFile] = useState(null);
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const [searchParam, setSearchParam] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -154,22 +158,39 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
   const [userOptions, setUserOptions] = useState([]);
   const isMounted = useRef(true);
 
-  const [schedules, setSchedules] = useState([
-    { weekday: i18n.t("queueModal.serviceHours.monday"), weekdayEn: "monday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: i18n.t("queueModal.serviceHours.tuesday"), weekdayEn: "tuesday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: i18n.t("queueModal.serviceHours.wednesday"), weekdayEn: "wednesday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: i18n.t("queueModal.serviceHours.thursday"), weekdayEn: "thursday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: i18n.t("queueModal.serviceHours.friday"), weekdayEn: "friday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: "Sábado", weekdayEn: "saturday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-    { weekday: "Domingo", weekdayEn: "sunday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00", },
-  ]);
+  const initialStateSchedule = [
+    { weekday: i18n.t("queueModal.serviceHours.monday"), weekdayEn: "monday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: i18n.t("queueModal.serviceHours.tuesday"), weekdayEn: "tuesday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: i18n.t("queueModal.serviceHours.wednesday"), weekdayEn: "wednesday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: i18n.t("queueModal.serviceHours.thursday"), weekdayEn: "thursday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: i18n.t("queueModal.serviceHours.friday"), weekdayEn: "friday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: "Sábado", weekdayEn: "saturday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" },
+    { weekday: "Domingo", weekdayEn: "sunday", startTimeA: "08:00", endTimeA: "12:00", startTimeB: "13:00", endTimeB: "18:00" }
+  ];
+
+
+  const [schedules, setSchedules] = useState(initialStateSchedule);
 
   const companyId = user.companyId;
 
   const { get: getSetting } = useCompanySettings();
+  const [showOpenAi, setShowOpenAi] = useState(false);
+  const [showIntegrations, setShowIntegrations] = useState(false);
+  const { getPlanCompany } = usePlans();
 
   useEffect(() => {
+    async function fetchData() {
+      const companyId = user.companyId;
+      const planConfigs = await getPlanCompany(undefined, companyId);
 
+      setShowOpenAi(planConfigs.plan.useOpenAi);
+      setShowIntegrations(planConfigs.plan.useIntegrations);
+    }
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
 
       const setting = await getSetting({
@@ -203,7 +224,9 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
         setQueue((prevState) => {
           return { ...prevState, ...data };
         });
-        setSchedules(data.schedules);
+
+        if (isArray(data.schedules) && data.schedules.length > 0)
+          setSchedules(data.schedules);
       } catch (err) {
         toastError(err);
       }
@@ -367,7 +390,34 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
     }
   };
 
+  // const renderColorBox = (open, handleClose, color, handleColorChange) => {
+  //   return (
+  //     <Dialog open={open} onClose={handleClose}>
 
+  //       <DialogTitle>Escolha uma cor</DialogTitle>
+  //       <DialogContent>
+  //         <ColorBox
+  //           disableAlpha={true}
+  //           hslGradient={false}
+  //           style={{ margin: '20px auto 0' }}
+  //           value={color}
+  //           onChange={handleColorChange} />
+  //       </DialogContent>
+  //       <DialogActions>
+  //         <Button onClick={handleClose} color="primary">
+  //           Cancelar
+  //         </Button>
+  //         <Button
+  //           color="primary"
+  //           variant="contained"
+  //           className={classes.btnWrapper}
+  //           onClick={handleClose} >
+  //           OK
+  //         </Button>
+  //       </DialogActions>
+  //     </Dialog>
+  //   )
+  // }
   return (
     <div className={classes.root}>
       <ConfirmationModal
@@ -455,26 +505,25 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                         <IconButton
                           size="small"
                           color="default"
-                          onClick={() => setColorPickerModalOpen(true)}
+                          onClick={() => setColorPickerModalOpen(!colorPickerModalOpen)}
                         >
                           <Colorize />
+
                         </IconButton>
                       ),
                     }}
                     variant="outlined"
                     margin="dense"
                   />
-
-                  <ColorPicker
+                  <ColorBoxModal
                     open={colorPickerModalOpen}
                     handleClose={() => setColorPickerModalOpen(false)}
                     onChange={(color) => {
-                      values.color = color;
-                      setQueue(() => {
-                        return { ...values, color };
-                      });
+                      setFieldValue("color", `#${color.hex}`);
                     }}
+                    currentColor={values.color}
                   />
+                  
                   <Field
                     as={TextField}
                     label={i18n.t("queueModal.form.orderQueue")}
@@ -529,33 +578,35 @@ const QueueModal = ({ open, onClose, queueId, onEdit }) => {
                     </Field>
                   </div>
                   <div>
-                    <FormControl
-                      variant="outlined"
-                      margin="dense"
-                      className={classes.FormControl}
-                      fullWidth
-                    >
-                      <InputLabel id="integrationId-selection-label">
-                        {i18n.t("queueModal.form.integrationId")}
-                      </InputLabel>
-                      <Field
-                        as={Select}
-                        label={i18n.t("queueModal.form.integrationId")}
-                        name="integrationId"
-                        id="integrationId"
-                        placeholder={i18n.t("queueModal.form.integrationId")}
-                        labelId="integrationId-selection-label"
-                        value={values.integrationId || ""}
+                    {showIntegrations && (
+                      <FormControl
+                        variant="outlined"
+                        margin="dense"
+                        className={classes.FormControl}
+                        fullWidth
                       >
-                        <MenuItem value={""} >{"Nenhum"}</MenuItem>
-                        {integrations.map((integration) => (
-                          <MenuItem key={integration.id} value={integration.id}>
-                            {integration.name}
-                          </MenuItem>
-                        ))}
-                      </Field>
+                        <InputLabel id="integrationId-selection-label">
+                          {i18n.t("queueModal.form.integrationId")}
+                        </InputLabel>
+                        <Field
+                          as={Select}
+                          label={i18n.t("queueModal.form.integrationId")}
+                          name="integrationId"
+                          id="integrationId"
+                          placeholder={i18n.t("queueModal.form.integrationId")}
+                          labelId="integrationId-selection-label"
+                          value={values.integrationId || ""}
+                        >
+                          <MenuItem value={""} >{"Nenhum"}</MenuItem>
+                          {integrations.map((integration) => (
+                            <MenuItem key={integration.id} value={integration.id}>
+                              {integration.name}
+                            </MenuItem>
+                          ))}
+                        </Field>
 
-                    </FormControl>
+                      </FormControl>
+                    )}
                     <FormControl
                       variant="outlined"
                       margin="dense"

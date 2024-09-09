@@ -94,7 +94,7 @@ const PurpleCheckbox = withStyles({
 
 const MessageModal = ({ open, onClose, messageId, reload }) => {
   const classes = useStyles();
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
 
   const initialState = {
     nome: "",

@@ -8,8 +8,8 @@ import BottomNavigationAction from '@material-ui/core/BottomNavigationAction';
 import QuestionAnswerIcon from '@material-ui/icons/QuestionAnswer';
 import ChatIcon from '@material-ui/icons/Chat';
 
-import TicketsManagerTabs from "../../components/TicketsManagerTabs/";
-import Ticket from "../../components/Ticket/";
+import TicketsManagerTabs from "../../components/TicketsManagerTabs";
+import Ticket from "../../components/Ticket";
 import TicketAdvancedLayout from "../../components/TicketAdvancedLayout";
 
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
@@ -41,7 +41,6 @@ const TicketAdvanced = (props) => {
     const { ticketId } = useParams();
     const [option, setOption] = useState(0);
     const { currentTicket, setCurrentTicket } = useContext(TicketsContext)
-    const [selectedQueuesMessage, setSelectedQueuesMessage] = useState();
 
     useEffect(() => {
         if (currentTicket.id !== null) {
@@ -72,7 +71,7 @@ const TicketAdvanced = (props) => {
     }
 
     const renderMessageContext = () => {
-        if (ticketId) {
+        if (ticketId && ticketId !== "undefined") {
             return <Ticket />
         }
         return renderPlaceholder()

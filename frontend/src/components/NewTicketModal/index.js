@@ -40,6 +40,7 @@ const filter = createFilterOptions({
 const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const classes = useStyles();
   const [options, setOptions] = useState([]);
+  const [channelFilter, setChannelFilter] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [searchParam, setSearchParam] = useState("");
@@ -68,8 +69,20 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
     const delayDebounceFn = setTimeout(() => {
       const fetchContacts = async () => {
         api
+          // .get(`/whatsapp/filter`, { params: { companyId, session: 0, channel: channelFilter } })
           .get(`/whatsapp`, { params: { companyId, session: 0 } })
           .then(({ data }) => setWhatsapps(data));
+
+          // .then(({ data }) => {
+          //   const mappedWhatsapps = data.map((whatsapp) => ({
+          //     ...whatsapp,
+          //     selected: false,
+          //   }));
+          //   setWhatsapps(mappedWhatsapps);
+          //   if (channelFilter && mappedWhatsapps.length && mappedWhatsapps?.length === 1 && (user.whatsappId === null || user?.whatsapp?.channel !== channelFilter)) {
+          //     setSelectedWhatsapp(mappedWhatsapps[0].id)
+          //   }
+          // });
       };
 
       if (whatsappId !== null && whatsappId !== undefined) {
@@ -83,7 +96,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
       setLoading(false);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [])
+  }, [selectedContact, channelFilter])
 
   useEffect(() => {
     if (!modalOpen || searchParam.length < 3) {
@@ -242,7 +255,10 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
             getOptionLabel={renderOptionLabel}
             renderOption={renderOption}
             filterOptions={createAddContactOption}
-            onChange={(e, newValue) => handleSelectOption(e, newValue)}
+            onChange={(e, newValue) => {                     
+              setChannelFilter(newValue ? newValue.channel : "whatsapp");
+              handleSelectOption(e, newValue)
+            }}
             renderInput={params => (
               <TextField
                 {...params}
@@ -311,7 +327,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                 }}
                 renderValue={() => {
                   if (selectedQueue === "") {
-                    return "Seleccione una fila"
+                    return "Selecione uma fila"
                   }
                   const queue = user.queues.find(q => q.id === selectedQueue)
                   return queue.name
@@ -350,7 +366,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
                 }}
                 renderValue={() => {
                   if (selectedWhatsapp === "") {
-                    return "Seleccione una conexión"
+                    return "Selecione uma Conexão"
                   }
                   const whatsapp = whatsapps.find(w => w.id === selectedWhatsapp)
                   return whatsapp?.name

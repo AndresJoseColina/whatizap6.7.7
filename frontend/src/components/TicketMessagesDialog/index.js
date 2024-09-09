@@ -19,7 +19,7 @@ import { ForwardMessageProvider } from "../../context/ForwarMessage/ForwardMessa
 
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
-import { socketConnection } from "../../services/socket";
+
 import html2pdf from "html2pdf.js";
 
 const drawerWidth = 320;
@@ -63,7 +63,7 @@ export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
   const history = useHistory();
   const classes = useStyles();
 
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
 
   const [, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);

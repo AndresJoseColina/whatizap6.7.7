@@ -59,7 +59,7 @@ export default function ChatList({
 }) {
   const classes = useStyles();
   const history = useHistory();
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const { datetimeToClient } = useDate();
 
   const [confirmationModal, setConfirmModalOpen] = useState(false);
@@ -111,13 +111,6 @@ export default function ChatList({
     return chat.lastMessage !== ""
       ? `${datetimeToClient(chat.updatedAt)}: ${chat.lastMessage}`
       : "";
-  };
-
-  const getItemStyle = (chat) => {
-    return {
-      borderLeft: chat.uuid === id ? "6px solid #002d6e" : null,
-      backgroundColor: chat.uuid === id ?  "#f2f2f2" : "#7f7f7f" ,
-    };
   };
 
   return (

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
-import { toast } from "react-toastify";
 import clsx from "clsx";
 
-import { makeStyles } from "@material-ui/core";
+import { makeStyles, Paper } from "@material-ui/core";
 
 import ContactDrawer from "../ContactDrawer";
-import MessageInput from "../MessageInput/";
+import MessageInput from "../MessageInput";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtonsCustom";
@@ -19,11 +18,8 @@ import { ForwardMessageProvider } from "../../context/ForwarMessage/ForwardMessa
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TagsContainer } from "../TagsContainer";
-import { socketConnection } from "../../services/socket";
 import { isNil } from 'lodash';
-import { Lock, LockOpen } from "@material-ui/icons";
-import { i18n } from "../../translate/i18n";
-import { Paper } from "@mui/material";
+import { EditMessageProvider } from "../../context/EditingMessage/EditingMessageContext";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 
 const drawerWidth = 320;
@@ -68,108 +64,102 @@ const Ticket = () => {
   const history = useHistory();
   const classes = useStyles();
 
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
+  const { setTabOpen } = useContext(TicketsContext);
+
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
-  const [whatsapp, setWhatsapp] = useState({});
-  const [queueId, setQueueId] = useState({});
-  const { currentTicket, setCurrentTicket } = useContext(TicketsContext)
   const [dragDropFiles, setDragDropFiles] = useState([]);
+  const { companyId } = user;
 
-  const [isMounted, setIsMounted] = useState(true);
   useEffect(() => {
-    // ComponentDidMount
-    return () => {
-      // ComponentWillUnmount
-      setIsMounted(false);
-    };
-  }, []);
+    console.log("======== Ticket ===========")
+    console.log(ticket)
+    console.log("===========================")
+}, [ticket])
 
   useEffect(() => {
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
         try {
-          if (!isNil(ticketId) && ticketId !== "undefined" && ticketId === currentTicket.uuid) {
-            if (isMounted) {
-              const { data } = await api.get("/tickets/u/" + ticketId);
 
-              // const { queueId } = data;
-              // const { queues, profile, allowGroup } = user;
+          if (!isNil(ticketId) && ticketId !== "undefined") {
 
-              // const queueAllowed = queues.find((q) => q.id === queueId);
-              // if (queueAllowed === undefined && profile !== "admin" && !allowGroup) {
-              //   toast.error("Acesso não permitido");
-              //   history.push("/tickets");
-              //   return;
-              // }
+            const { data } = await api.get("/tickets/u/" + ticketId);
 
-              setContact(data.contact);
-              setWhatsapp(data.whatsapp);
-              setQueueId(data.queueId);
-              setTicket(data);
-              setLoading(false);
+            setContact(data.contact);
+            // setWhatsapp(data.whatsapp);
+            // setQueueId(data.queueId);
+            setTicket(data);
+            if (["pending", "open", "group"].includes(data.status)) {
+              setTabOpen(data.status);
             }
-          } else {
-            history.push("/tickets");   // correção para evitar tela branca uuid não encontrado Feito por Altemir 16/08/2023
             setLoading(false);
           }
         } catch (err) {
           history.push("/tickets");   // correção para evitar tela branca uuid não encontrado Feito por Altemir 16/08/2023
           setLoading(false);
           toastError(err);
-        } finally {
-          if (isMounted.current) {
-            setLoading(false);
-          }
         }
       };
       fetchTicket();
     }, 500);
 
-    return () => {
-
-      clearTimeout(delayDebounceFn);
-      // setMounted(false);
-
-    }
-  }, [ticketId, history, currentTicket]);
+    return () => clearTimeout(delayDebounceFn);
+  }, [ticketId, user, history]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    const socket = socketConnection({ companyId, userId: user.id });
+    if (!ticket && !ticket.id && ticket.uuid !== ticketId && ticketId === "undefined") {
+      return;
+    }
 
-    socket.on("connect", () => socket.emit("joinChatBox", `${ticket.id}`));
+    if (user.companyId) {
+      //    const socket = socketManager.GetSocket();
 
-    socket.on(`company-${companyId}-ticket`, (data) => {
-      if (data.action === "update") {
-        setTicket(data.ticket);
+      const onConnectTicket = () => {
+        socket.emit("joinChatBox", `${ticket.id}`);
       }
 
-      if (data.action === "delete") {
-        toast.success("Ticket encerrado com sucesso.");
-        history.push("/tickets");
-      }
-    });
+      const onCompanyTicket = (data) => {
+        if (data.action === "update" && data.ticket.id === ticket?.id) {
+          setTicket(data.ticket);
+        }
 
-    socket.on(`company-${companyId}-contact`, (data) => {
-      if (data.action === "update") {
-        setContact((prevState) => {
-          if (prevState.id === data.contact?.id) {
-            return { ...prevState, ...data.contact };
-          }
-          return prevState;
-        });
-      }
-    });
+        if (data.action === "delete" && data.ticketId === ticket?.id) {
+          history.push("/tickets");
+        }
+      };
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [ticketId, history]);
+      const onCompanyContactTicket = (data) => {
+        if (data.action === "update") {
+          // if (isMounted) {
+          setContact((prevState) => {
+            if (prevState.id === data.contact?.id) {
+              return { ...prevState, ...data.contact };
+            }
+            return prevState;
+          });
+          // }
+        }
+      };
+
+      socket.on("connect", onConnectTicket)
+      socket.on(`company-${companyId}-ticket`, onCompanyTicket);
+      socket.on(`company-${companyId}-contact`, onCompanyContactTicket);
+
+      return () => {
+
+        socket.emit("joinChatBoxLeave", `${ticket.id}`);
+        socket.off("connect", onConnectTicket);
+        socket.off(`company-${companyId}-ticket`, onCompanyTicket);
+        socket.off(`company-${companyId}-contact`, onCompanyContactTicket);
+      };
+    }
+  }, [ticketId, ticket, history]);
 
   const handleDrawerOpen = useCallback(() => {
     setDrawerOpen(true);
@@ -179,6 +169,27 @@ const Ticket = () => {
     setDrawerOpen(false);
   }, []);
 
+  const renderMessagesList = () => {
+    return (
+      <>
+        <MessagesList
+          isGroup={ticket.isGroup}
+          onDrop={setDragDropFiles}
+          whatsappId={ticket.whatsappId}
+          queueId={ticket.queueId}
+          channel={ticket.channel}
+        >
+        </MessagesList>
+        <MessageInput
+          ticketId={ticket.id}
+          ticketStatus={ticket.status}
+          ticketChannel={ticket.channel}
+          droppedFiles={dragDropFiles}
+          contactId={contact.id}
+        />
+      </>
+    );
+  };
 
 
   return (
@@ -192,12 +203,15 @@ const Ticket = () => {
       >
         {/* <div id="TicketHeader"> */}
         <TicketHeader loading={loading}>
-          <div id="TicketHeader">
-            <TicketInfo
-              contact={contact}
-              ticket={ticket}
-              onClick={handleDrawerOpen}
-            />          </div>
+          {ticket.contact !== undefined && (
+            <div id="TicketHeader">
+              <TicketInfo
+                contact={contact}
+                ticket={ticket}
+                onClick={handleDrawerOpen}
+              />
+            </div>
+          )}
           <TicketActionButtons
             ticket={ticket}
           />
@@ -208,31 +222,13 @@ const Ticket = () => {
         </Paper>
         <ReplyMessageProvider>
           <ForwardMessageProvider>
-            {currentTicket.uuid === ticketId && isMounted && (
-              <>
-                {/* {console.log("RENDERIZOU")} */}
-                <MessagesList
-                  // ticket={ticket}
-                  ticketId={ticket.id}
-                  isGroup={ticket.isGroup}
-                  whatsapp={whatsapp}
-                  queueId={queueId}
-                  channel={ticket.channel}
-                  onDrop={setDragDropFiles}
-                >
-                </MessagesList>
-                <MessageInput
-                  ticketId={ticket.id}
-                  ticketStatus={ticket.status}
-                  currentTicketId={ticketId}
-                  ticketChannel={ticket.channel}
-                  droppedFiles={dragDropFiles}
-                />
-              </>
-            )}
+            <EditMessageProvider>
+              {renderMessagesList()}
+            </EditMessageProvider>
           </ForwardMessageProvider>
         </ReplyMessageProvider>
       </Paper>
+
       <ContactDrawer
         open={drawerOpen}
         handleDrawerClose={handleDrawerClose}
@@ -240,6 +236,7 @@ const Ticket = () => {
         loading={loading}
         ticket={ticket}
       />
+
     </div>
   );
 };

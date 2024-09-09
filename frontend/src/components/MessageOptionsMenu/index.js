@@ -8,15 +8,17 @@ import ConfirmationModal from "../ConfirmationModal";
 import { Menu } from "@material-ui/core";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { ForwardMessageContext } from "../../context/ForwarMessage/ForwardMessageContext";
+import { EditMessageContext } from "../../context/EditingMessage/EditingMessageContext";
 
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
-import { v4 as uuidv4 } from "uuid";
+// import { v4 as uuidv4 } from "uuid";
 
 import toastError from "../../errors/toastError";
 import { useHistory } from "react-router-dom";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import ForwardModal from "../../components/ForwardMessageModal";
+import ForwardModal from "../ForwardMessageModal";
 import ShowTicketOpen from "../ShowTicketOpenModal";
+import AcceptTicketWithoutQueue from "../AcceptTicketWithoutQueueModal";
 
 const MessageOptionsMenu = ({
   message,
@@ -30,25 +32,23 @@ const MessageOptionsMenu = ({
   const { setReplyingMessage } = useContext(ReplyMessageContext);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const { user } = useContext(AuthContext);
-
+  const editingContext = useContext(EditMessageContext);
+  const setEditingMessage = editingContext ? editingContext.setEditingMessage : null;
+  const { setTabOpen } = useContext(TicketsContext);
   const history = useHistory();
-  const { setCurrentTicket } = useContext(TicketsContext);
 
   const [openAlert, setOpenAlert] = useState(false);
   const [userTicketOpen, setUserTicketOpen] = useState("");
   const [queueTicketOpen, setQueueTicketOpen] = useState("");
+  const [acceptTicketWithouSelectQueueOpen, setAcceptTicketWithouSelectQueueOpen] = useState(false);
+
+  const [ticketOpen, setTicketOpen] = useState(null);
 
   const { showSelectMessageCheckbox,
     setShowSelectMessageCheckbox,
     selectedMessages,
     forwardMessageModalOpen,
     setForwardMessageModalOpen } = useContext(ForwardMessageContext);
-
-  const handleSelectTicket = (ticket) => {
-    const code = uuidv4();
-    const { id, uuid } = ticket;
-    setCurrentTicket({ id, uuid, code });
-  }
 
   const handleSaveTicket = async (contactId) => {
     if (!contactId) return;
@@ -61,8 +61,14 @@ const MessageOptionsMenu = ({
         queueId: queueId,
         whatsappId: whatsappId
       });
-      handleSelectTicket(ticket);
-      history.push(`/tickets/${ticket.uuid}`);
+
+      setTicketOpen(ticket);
+      if (ticket.queueId === null) {
+        setAcceptTicketWithouSelectQueueOpen(true);
+      } else {
+        setTabOpen("open");
+        history.push(`/tickets/${ticket.uuid}`);
+      }
     } catch (err) {
       const ticket = JSON.parse(err.response.data.error);
 
@@ -74,8 +80,9 @@ const MessageOptionsMenu = ({
         setOpenAlert(false);
         setUserTicketOpen("");
         setQueueTicketOpen("");
-        
-        handleSelectTicket(ticket);
+
+        // handleSelectTicket(ticket);
+        setTabOpen(ticket.status);
         history.push(`/tickets/${ticket.uuid}`);
       }
     }
@@ -103,6 +110,10 @@ const MessageOptionsMenu = ({
     }
   };
 
+  const handleEditMessage = async () => {
+    setEditingMessage(message);
+    handleClose();
+  }
   // const handleForwardMessage = (msg) => {
   //   setForwardModalOpen(true);
   //   setForwardMessage(msg);
@@ -120,6 +131,15 @@ const MessageOptionsMenu = ({
     handleClose();
   };
 
+  const isWithinFifteenMinutes = () => {
+    const fifteenMinutesInMilliseconds = 15 * 60 * 1000; // 15 minutos em milissegundos
+    const currentTime = new Date();
+    const messageTime = new Date(message.createdAt);
+
+    // Verifica se a diferença entre o tempo atual e o tempo da mensagem é menor que 15 minutos
+    return currentTime - messageTime <= fifteenMinutesInMilliseconds;
+  };
+
   const handleOpenConfirmationModal = (e) => {
     setConfirmationOpen(true);
     handleClose();
@@ -127,6 +147,12 @@ const MessageOptionsMenu = ({
 
   return (
     <>
+      <AcceptTicketWithoutQueue
+        modalOpen={acceptTicketWithouSelectQueueOpen}
+        onClose={(e) => setAcceptTicketWithouSelectQueueOpen(false)}
+        ticket={ticketOpen}
+        ticketId={ticketOpen?.id}
+      />
       <ShowTicketOpen
         isOpen={openAlert}
         handleClose={handleCloseAlert}
@@ -165,8 +191,13 @@ const MessageOptionsMenu = ({
         onClose={handleClose}
       >
         {message.fromMe && (
-          <MenuItem onClick={handleOpenConfirmationModal}>
+          <MenuItem key="delete" onClick={handleOpenConfirmationModal}>
             {i18n.t("messageOptionsMenu.delete")}
+          </MenuItem>
+        )}
+        {message.fromMe && isWithinFifteenMinutes() && (
+          <MenuItem key="edit" onClick={handleEditMessage}>
+            {i18n.t("messageOptionsMenu.edit")}
           </MenuItem>
         )}
         <MenuItem onClick={hanldeReplyMessage}>

@@ -2,7 +2,6 @@ import React, {
   useState,
   useEffect,
   useReducer,
-  useCallback,
   useContext,
   useRef,
 } from "react";
@@ -35,58 +34,32 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import TagModal from "../../components/TagModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import { Chip } from "@material-ui/core";
-import { socketConnection } from "../../services/socket";
+import { Chip, Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { MoreHoriz } from "@material-ui/icons";
+import ContactTagListModal from "../../components/ContactTagListModal";
 
 const reducer = (state, action) => {
-  if (action.type === "LOAD_TAGS") {
-    return [...state, ...action.payload];
-  }
-  // if (action.type === "LOAD_TAGS") {
-  //   const tags = action.payload;
-  //   const newTags = [];
+  switch (action.type) {
+    case "LOAD_TAGS":
+      return [...state, ...action.payload];
+    case "UPDATE_TAGS":
+      const tag = action.payload;
+      const tagIndex = state.findIndex((s) => s.id === tag.id);
 
-  //   tags.forEach((tag) => {
-  //     const tagIndex = state.findIndex((s) => s.id === tag.id);
-  //     if (tagIndex !== -1) {
-  //       state[tagIndex] = tag;
-  //     } else {
-  //       newTags.push(tag);
-  //     }
-  //   });
-
-  //   return [...state, ...newTags];
-  // }
-
-  if (action.type === "UPDATE_TAGS") {
-    const tag = action.payload;
-    const tagIndex = state.findIndex((s) => s.id === tag.id);
-
-    if (tagIndex !== -1) {
-      state[tagIndex] = tag;
-      return [...state];
-    } else {
-      return [tag, ...state];
-    }
-  }
-
-  // if (action.type === "DELETE_TAGS") {
-  //   const tagId = action.payload;
-
-  //   const tagIndex = state.findIndex((s) => s.id === tagId);
-  //   if (tagIndex !== -1) {
-  //     state.splice(tagIndex, 1);
-  //   }
-  //   return [...state];
-  // }
-  if (action.type === "DELETE_TAGS") {
-    const tagId = action.payload;
-    return state.filter((tag) => tag.id !== tagId);
-  }
-
-  if (action.type === "RESET") {
-    return [];
+      if (tagIndex !== -1) {
+        state[tagIndex] = tag;
+        return [...state];
+      } else {
+        return [tag, ...state];
+      }
+    case "DELETE_TAGS":
+      const tagId = action.payload;
+      return state.filter((tag) => tag.id !== tagId);
+    case "RESET":
+      return [];
+    default:
+      return state;
   }
 };
 
@@ -101,12 +74,14 @@ const useStyles = makeStyles((theme) => ({
 
 const Tags = () => {
   const classes = useStyles();
+  const { user, socket } = useContext(AuthContext);
 
-  const { user } = useContext(AuthContext);
-
+  const [selectedTagContacts, setSelectedTagContacts] = useState([]);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [selectedTagName, setSelectedTagName] = useState("");
   const [selectedTag, setSelectedTag] = useState(null);
   const [deletingTag, setDeletingTag] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -115,18 +90,12 @@ const Tags = () => {
   const [tagModalOpen, setTagModalOpen] = useState(false);
   const pageNumberRef = useRef(1);
 
-  const loadMore = () => {
-    setPageNumber((prevPageNumber) => prevPageNumber + 1);
-  };
-
   useEffect(() => {
-
     const fetchMoreTags = async () => {
       try {
         const { data } = await api.get("/tags/", {
           params: { searchParam, pageNumber, kanban: 0 },
         });
-  
         dispatch({ type: "LOAD_TAGS", payload: data.tags });
         setHasMore(data.hasMore);
         setLoading(false);
@@ -134,7 +103,7 @@ const Tags = () => {
         toastError(err);
       }
     };
-  
+
     if (pageNumber > 0) {
       setLoading(true);
       fetchMoreTags();
@@ -142,10 +111,7 @@ const Tags = () => {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    const socket = socketConnection({ companyId: user.companyId });
-
-    socket.on(`company${user.companyId}-tag`, (data) => {
-
+    const onCompanyTags = (data) => {
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_TAGS", payload: data.tag });
       }
@@ -153,12 +119,13 @@ const Tags = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_TAGS", payload: +data.tagId });
       }
-    });
+    };
+    socket.on(`company${user.companyId}-tag`, onCompanyTags);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company${user.companyId}-tag`, onCompanyTags);
     };
-  }, []);
+  }, [socket, user.companyId]);
 
   const handleOpenTagModal = () => {
     setSelectedTag(null);
@@ -171,12 +138,27 @@ const Tags = () => {
   };
 
   const handleSearch = (event) => {
-    setSearchParam(event.target.value.toLowerCase());
+    const newSearchParam = event.target.value.toLowerCase();
+    setSearchParam(newSearchParam);
+    setPageNumber(1);
+    dispatch({ type: "RESET" });
   };
 
   const handleEditTag = (tag) => {
     setSelectedTag(tag);
     setTagModalOpen(true);
+  };
+
+  const handleShowContacts = (contacts, tag) => {
+    setSelectedTagContacts(contacts);
+    setContactModalOpen(true);
+    setSelectedTagName(tag);
+  };
+
+  const handleCloseContactModal = () => {
+    setContactModalOpen(false);
+    setSelectedTagContacts([]);
+    setSelectedTagName("");
   };
 
   const handleDeleteTag = async (tagId) => {
@@ -191,10 +173,9 @@ const Tags = () => {
     setPageNumber(1);
   };
 
-  // const loadMore = () => {
-  //   setPageNumber((prevState) => prevState + 1);
-  // };
-  
+  const loadMore = () => {
+    setPageNumber((prevPageNumber) => prevPageNumber + 1);
+  };
 
   const handleScroll = (e) => {
     if (!hasMore || loading) return;
@@ -206,10 +187,17 @@ const Tags = () => {
 
   return (
     <MainContainer className={classes.mainContainer}>
+      {contactModalOpen && (
+        <ContactTagListModal
+          open={contactModalOpen}
+          onClose={handleCloseContactModal}
+          tag={selectedTagName}
+        />
+      )}
       <ConfirmationModal
         title={deletingTag && `${i18n.t("tags.confirmationModal.deleteTitle")}`}
         open={confirmModalOpen}
-        onClose={setConfirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
         onConfirm={() => handleDeleteTag(deletingTag.id)}
       >
         {i18n.t("tags.confirmationModal.deleteMessage")}
@@ -254,6 +242,7 @@ const Tags = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell align="center">{i18n.t("tags.table.id")}</TableCell>
               <TableCell align="center">{i18n.t("tags.table.name")}</TableCell>
               <TableCell align="center">
                 {i18n.t("tags.table.contacts")}
@@ -267,19 +256,30 @@ const Tags = () => {
             <>
               {tags.map((tag) => (
                 <TableRow key={tag.id}>
+                  <TableCell align="center">{tag.id}</TableCell>
                   <TableCell align="center">
                     <Chip
                       variant="outlined"
                       style={{
                         backgroundColor: tag.color,
-                        textShadow: "1px 1px 1px #000",
+                        textShadow: "1px 1px #000",
                         color: "white",
                       }}
                       label={tag.name}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">{tag?.contactTags?.length}</TableCell>
+                  <TableCell align="center">
+                    {tag?.contacts?.length}
+                    <IconButton
+                      size="small"
+                      onClick={() => handleShowContacts(tag?.contacts, tag)}
+                      disabled={tag?.contacts?.length === 0}
+                    >
+                      <MoreHoriz />
+                    </IconButton>
+                  </TableCell>
+
                   <TableCell align="center">
                     <IconButton size="small" onClick={() => handleEditTag(tag)}>
                       <EditIcon />
@@ -287,7 +287,7 @@ const Tags = () => {
 
                     <IconButton
                       size="small"
-                      onClick={(e) => {
+                      onClick={() => {
                         setConfirmModalOpen(true);
                         setDeletingTag(tag);
                       }}
@@ -298,7 +298,7 @@ const Tags = () => {
                 </TableRow>
               ))}
 
-              {loading && <TableRowSkeleton key="skeleton" columns={3} />}
+              {loading && <TableRowSkeleton key="skeleton" columns={4} />}
             </>
           </TableBody>
         </Table>

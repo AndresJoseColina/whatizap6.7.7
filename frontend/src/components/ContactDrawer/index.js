@@ -26,6 +26,7 @@ import useCompanySettings from "../../hooks/useSettings/companySettings";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { toast } from "react-toastify";
+import { TagsKanbanContainer } from "../TagsKanbanContainer";
 
 
 const drawerWidth = 320;
@@ -62,7 +63,7 @@ const useStyles = makeStyles(theme => ({
 		justifyContent: "center",
 		overflowY: "scroll",
 		...theme.scrollbarStyles,
-	},	
+	},
 
 	contactAvatar: {
 		margin: 15,
@@ -98,68 +99,64 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
-    const [blockingContact, setBlockingContact] = useState(contact.active);
+	const [blockingContact, setBlockingContact] = useState(contact.active);
 	const [openForm, setOpenForm] = useState(false);
 	const { get } = useCompanySettings();
 	const [hideNum, setHideNum] = useState(false);
 	const { user } = useContext(AuthContext);
-	const [disableBot, setDisableBot] = useState(contact.disableBot);
+    const [acceptAudioMessage, setAcceptAudio] = useState(contact.acceptAudioMessage);
 
 	useEffect(() => {
-        async function fetchData() {
+		async function fetchData() {
 
-            const lgpdHideNumber = await get({
-    			"column":"lgpdHideNumber"
+			const lgpdHideNumber = await get({
+				"column": "lgpdHideNumber"
 			});
-           
-            if (lgpdHideNumber === "enabled") setHideNum(true);
 
-        }
-        fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+			if (lgpdHideNumber === "enabled") setHideNum(true);
+
+		}
+		fetchData();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [])
 
 	useEffect(() => {
 		setOpenForm(false);
-		setDisableBot(contact.disableBot)
 	}, [open, contact]);
 
-	const handleContactToggleDisableBot = async () => {
+	
 
-		const {id} = contact;
+	const handleContactToggleAcceptAudio = async () => {
+        try {
+            const contact = await api.put(`/contacts/toggleAcceptAudio/${ticket.contact.id}`);
+            setAcceptAudio(contact.data.acceptAudioMessage);
+        } catch (err) {
+            toastError(err);
+        }
+    };
 
+	const handleBlockContact = async (contactId) => {
 		try {
-			const {data} = await api.put(`/contacts/toggleDisableBot/${id}`);
-			contact.disableBot = data.disableBot;
-			setDisableBot(data.disableBot)
-
+			await api.put(`/contacts/block/${contactId}`, { active: false });
+			toast.success("Contato bloqueado");
 		} catch (err) {
 			toastError(err);
 		}
+
+		setBlockingContact(true);
 	};
 
-	const handleBlockContact = async (contactId) => {
-        try {
-            await api.put(`/contacts/block/${contactId}`, { active: false });
-            toast.success("Contato bloqueado");
-        } catch (err) {
-            toastError(err);
-        }
+	const handleUnBlockContact = async (contactId) => {
+		try {
+			await api.put(`/contacts/block/${contactId}`, { active: true });
+			toast.success("Contato desbloqueado");
+		} catch (err) {
+			toastError(err);
+		}
+		setBlockingContact(false);
+	};
 
-        setBlockingContact(true);
-    };
-
-    const handleUnBlockContact = async (contactId) => {
-        try {
-            await api.put(`/contacts/block/${contactId}`, { active: true });
-            toast.success("Contato desbloqueado");
-        } catch (err) {
-            toastError(err);
-        }
-        setBlockingContact(false);
-    };
-
-	if(loading) return null;
+	if (loading) return null;
 
 	return (
 		<>
@@ -195,15 +192,15 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 							>
 								<Switch
 									size="small"
-									checked={disableBot}
-									onChange={() => handleContactToggleDisableBot()}
+									checked={acceptAudioMessage}
+									onChange={() => handleContactToggleAcceptAudio()}
 									name="disableBot"
 									color="primary"
 								/>
-									{i18n.t("contactModal.form.chatBotContact")}
+								{i18n.t("ticketOptionsMenu.acceptAudioMessage")}								
 							</Typography>
 						</>
-					) : (<br />)}					
+					) : (<br />)}
 				</div>
 				{loading ? (
 					<ContactDrawerSkeleton classes={classes} />
@@ -227,7 +224,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								subheader={
 									<>
 										<Typography style={{ fontSize: 12 }}>
-											{hideNum && user.profile === "user" ? formatSerializedId(contact.number).slice(0,-6)+"**-**"+ contact.number.slice(-2): formatSerializedId(contact.number)}
+											{hideNum && user.profile === "user" ? formatSerializedId(contact.number).slice(0, -6) + "**-**" + contact.number.slice(-2) : formatSerializedId(contact.number)}
 										</Typography>
 										<Typography style={{ color: "primary", fontSize: 12 }}>
 											<Link href={`mailto:${contact.email}`}>{contact.email}</Link>
@@ -252,10 +249,10 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								disabled={loading}
 							>
 								{!contact.active ? "Desbloquear contato" : "Bloquear contato"}
-							</Button>							
+							</Button>
 							{(contact.id && openForm) && <ContactForm initialContact={contact} onCancel={() => setOpenForm(false)} />}
 						</Paper>
-						{/* <TagsContainer contact={contact} className={classes.contactTags} /> */}
+						<TagsKanbanContainer ticket={ticket} className={classes.contactTags} />
 						<Paper square variant="outlined" className={classes.contactDetails}>
 							<Typography variant="subtitle1" style={{ marginBottom: 10 }}>
 								{i18n.t("ticketOptionsMenu.appointmentsModal.title")}

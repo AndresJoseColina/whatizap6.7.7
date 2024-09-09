@@ -8,24 +8,22 @@ import Typography from "@material-ui/core/Typography";
 import Grid from "@material-ui/core/Grid";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { v4 as uuidv4 } from "uuid";
 
-import { Button, Divider, } from "@material-ui/core";
+import { Button, Divider, useTheme, } from "@material-ui/core";
 import { isNil } from 'lodash';
 import ShowTicketOpen from '../ShowTicketOpenModal';
-import { TicketsContext } from '../../context/Tickets/TicketsContext';
+import { grey } from '@material-ui/core/colors';
 
 const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
-
+    const theme = useTheme();
     const history = useHistory();
     const { user } = useContext(AuthContext);
 
     const companyId = user.companyId;
 
-    const [ openAlert, setOpenAlert ] = useState(false);
-	const [ userTicketOpen, setUserTicketOpen] = useState("");
-	const [ queueTicketOpen, setQueueTicketOpen] = useState("");
-    const { setCurrentTicket } = useContext(TicketsContext);
+    const [openAlert, setOpenAlert] = useState(false);
+    const [userTicketOpen, setUserTicketOpen] = useState("");
+    const [queueTicketOpen, setQueueTicketOpen] = useState("");
 
     const [selectedContact, setContact] = useState({
         id: 0,
@@ -59,11 +57,7 @@ const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
     //     }, 500);
     //     return () => clearTimeout(delayDebounceFn);
     // }, [contact, numbers]);
-    const handleSelectTicket = (ticket) => {
-        const code = uuidv4();
-        const { id, uuid } = ticket;
-        setCurrentTicket({ id, uuid, code });
-    };
+
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -104,14 +98,14 @@ const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
             fetchContacts();
         }, 500);
         return () => clearTimeout(delayDebounceFn);
-    }, [contact, numbers]);
+    }, [companyId, contact, numbers]);
 
     const handleCloseAlert = () => {
         setOpenAlert(false);
         setOpenAlert(false);
         setUserTicketOpen("");
         setQueueTicketOpen("");
-      };
+    };
 
     const handleNewChat = async () => {
         try {
@@ -123,23 +117,21 @@ const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
                 companyId: companyId,
                 whatsappId
             });
-            handleSelectTicket(ticket);
 
             history.push(`/tickets/${ticket.uuid}`);
         } catch (err) {
-            const ticket  = JSON.parse(err.response.data.error);
+            const ticket = JSON.parse(err.response.data.error);
 
             if (ticket.userId !== user?.id) {
-              setOpenAlert(true);
-              setUserTicketOpen(ticket.user.name);
-              setQueueTicketOpen(ticket.queue.name);
+                setOpenAlert(true);
+                setUserTicketOpen(ticket.user.name);
+                setQueueTicketOpen(ticket.queue.name);
             } else {
-              setOpenAlert(false);
-              setUserTicketOpen("");
-              setQueueTicketOpen("");
-              handleSelectTicket(ticket);
+                setOpenAlert(false);
+                setUserTicketOpen("");
+                setQueueTicketOpen("");
 
-              history.push(`/tickets/${ticket.uuid}`);
+                history.push(`/tickets/${ticket.uuid}`);
             }
         }
     }
@@ -149,7 +141,7 @@ const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
             <div style={{
                 minWidth: "250px",
             }}>
-                <ShowTicketOpen 
+                <ShowTicketOpen
                     isOpen={openAlert}
                     handleClose={handleCloseAlert}
                     user={userTicketOpen}
@@ -160,7 +152,12 @@ const VcardPreview = ({ contact, numbers, queueId, whatsappId }) => {
                         <Avatar src={`${selectedContact?.urlPicture}`} />
                     </Grid>
                     <Grid item xs={9}>
-                        <Typography style={{ marginTop: "12px", marginLeft: "10px" }} variant="subtitle1" color="primary" gutterBottom>
+                        <Typography
+                            style={{ marginTop: "12px", marginLeft: "10px" }}
+                            color="primary"
+                            variant="subtitle1"
+                            gutterBottom
+                        >
                             {selectedContact.name}
                         </Typography>
                     </Grid>

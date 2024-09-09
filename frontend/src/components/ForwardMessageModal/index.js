@@ -78,6 +78,7 @@ const ForwardMessageModal = ({ messages, onClose, modalOpen }) => {
 			}		
 		}
 		setSending(false);
+
 		history.push('/tickets');
     }
 

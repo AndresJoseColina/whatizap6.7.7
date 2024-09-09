@@ -27,7 +27,7 @@ import {
 import api from "../../services/api";
 import { isArray } from "lodash";
 import moment from "moment";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -149,7 +149,9 @@ export default function AnnouncementsPopover() {
   const [invisible, setInvisible] = useState(false);
   const [announcement, setAnnouncement] = useState({});
   const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
-  const { user } = useContext(AuthContext);
+//   const socketManager = useContext(SocketContext);
+  const { user, socket } = useContext(AuthContext);
+
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -166,22 +168,26 @@ export default function AnnouncementsPopover() {
   }, [searchParam, pageNumber]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    const socket = socketConnection({ companyId, userId: user.id });
+    if (user.companyId) {
+      const companyId = user.companyId;
+//    const socket = socketManager.GetSocket();
 
-    socket.on(`company-announcement`, (data) => {
-      if (data.action === "update" || data.action === "create") {
-        dispatch({ type: "UPDATE_ANNOUNCEMENTS", payload: data.record });
-        setInvisible(false);
-      }
-      if (data.action === "delete") {
-        dispatch({ type: "DELETE_ANNOUNCEMENT", payload: +data.id });
-      }
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
+      const onCompanyAnnouncement = (data) => {
+        if (data.action === "update" || data.action === "create") {
+          dispatch({ type: "UPDATE_ANNOUNCEMENTS", payload: data.record });
+          setInvisible(false);
+        }
+        if (data.action === "delete") {
+          dispatch({ type: "DELETE_ANNOUNCEMENT", payload: +data.id });
+        }
+      };
+      socket.on(`company-announcement`, onCompanyAnnouncement);
+
+      return () => {
+        socket.off(`company-announcement`, onCompanyAnnouncement);
+      };
+    }
+  }, [user]);
 
   const fetchAnnouncements = async () => {
     try {
@@ -250,6 +256,7 @@ export default function AnnouncementsPopover() {
         variant="contained"
         aria-describedby={id}
         onClick={handleClick}
+        style={{ color: "white" }}
       >
         <Badge
           color="secondary"

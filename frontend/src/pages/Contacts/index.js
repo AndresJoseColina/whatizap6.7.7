@@ -5,7 +5,7 @@ import React, {
     useContext,
     useRef,
 } from "react";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
@@ -34,7 +34,7 @@ import BlockIcon from "@material-ui/icons/Block";
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
-import ConfirmationModal from "../../components/ConfirmationModal/";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
@@ -119,7 +119,9 @@ const Contacts = () => {
     const classes = useStyles();
     const history = useHistory();
 
-    const { user } = useContext(AuthContext);
+    //   const socketManager = useContext(SocketContext);
+    const { user, socket } = useContext(AuthContext);
+
 
     const [loading, setLoading] = useState(false);
     const [pageNumber, setPageNumber] = useState(1);
@@ -144,19 +146,25 @@ const Contacts = () => {
     const { setCurrentTicket } = useContext(TicketsContext);
 
 
-    const { get: getSetting } = useCompanySettings();
+    const { getAll: getAllSettings } = useCompanySettings();
     const [hideNum, setHideNum] = useState(false);
-
+    const [enableLGPD, setEnableLGPD] = useState(false);
     useEffect(() => {
 
         async function fetchData() {
-            const setting = await getSetting({
-                "column": "lgpdHideNumber"
-            });
 
-            if (setting.lgpdHideNumber === "enabled") {
-                setHideNum(true);
-            }
+            const settingList = await getAllSettings(user.companyId);
+
+            for (const [key, value] of Object.entries(settingList)) {
+                
+                if (key === "enableLGPD") setEnableLGPD(value === "enabled");
+                if (key === "lgpdHideNumber") setHideNum(value === "enabled");
+                
+              }
+
+            // if (settingHideNumber.lgpdHideNumber === "enabled") {
+            //     setHideNum(true);
+            // }
         }
         fetchData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,9 +212,9 @@ const Contacts = () => {
 
     useEffect(() => {
         const companyId = user.companyId;
-        const socket = socketConnection({ companyId, userId: user.id });
+        //    const socket = socketManager.GetSocket();
 
-        socket.on(`company-${companyId}-contact`, (data) => {
+        const onContactEvent = (data) => {
             if (data.action === "update" || data.action === "create") {
                 dispatch({ type: "UPDATE_CONTACTS", payload: data.contact });
             }
@@ -214,12 +222,13 @@ const Contacts = () => {
             if (data.action === "delete") {
                 dispatch({ type: "DELETE_CONTACT", payload: +data.contactId });
             }
-        });
+        };
+        socket.on(`company-${companyId}-contact`, onContactEvent);
 
         return () => {
-            socket.disconnect();
+            socket.off(`company-${companyId}-contact`, onContactEvent);
         };
-    }, []);
+    }, [socket]);
 
     const handleSelectTicket = (ticket) => {
         const code = uuidv4();
@@ -329,24 +338,24 @@ const Contacts = () => {
         }
     };
 
-    function getDateLastMessage(contact) {
-        if (!contact) return null;
-        if (!contact.tickets) return null;
+    // function getDateLastMessage(contact) {
+    //     if (!contact) return null;
+    //     if (!contact.tickets) return null;
 
-        if (contact.tickets.length > 0) {
-            const date = new Date(contact.tickets[contact.tickets.length - 1].updatedAt);
+    //     if (contact.tickets.length > 0) {
+    //         const date = new Date(contact.tickets[contact.tickets.length - 1].updatedAt);
 
-            const day = date.getDate() > 9 ? date.getDate() : `0${date.getDate()}`;
-            const month = date.getMonth() + 1 > 9 ? date.getMonth() + 1 : `0${date.getMonth() + 1}`;
-            const year = date.getFullYear();
-            const hours = date.getHours() > 9 ? date.getHours() : `0${date.getHours()}`;
-            const minutes = date.getMinutes() > 9 ? date.getMinutes() : `0${date.getMinutes()}`;
+    //         const day = date.getDate() > 9 ? date.getDate() : `0${date.getDate()}`;
+    //         const month = date.getMonth() + 1 > 9 ? date.getMonth() + 1 : `0${date.getMonth() + 1}`;
+    //         const year = date.getFullYear();
+    //         const hours = date.getHours() > 9 ? date.getHours() : `0${date.getHours()}`;
+    //         const minutes = date.getMinutes() > 9 ? date.getMinutes() : `0${date.getMinutes()}`;
 
-            return `${day}/${month}/${year} ${hours}:${minutes}`;
-        }
+    //         return `${day}/${month}/${year} ${hours}:${minutes}`;
+    //     }
 
-        return null;
-    }
+    //     return null;
+    // }
 
 
     return (
@@ -560,9 +569,9 @@ const Contacts = () => {
                             <TableCell align="center">
                                 {i18n.t("contacts.table.email")}
                             </TableCell>
-                            <TableCell align="center">
+                            {/* <TableCell align="center">
                                 {i18n.t("contacts.table.lastMessage")}
-                            </TableCell>
+                            </TableCell> */}
                             <TableCell align="center">
                                 {i18n.t("contacts.table.whatsapp")}
                             </TableCell>
@@ -581,20 +590,20 @@ const Contacts = () => {
                                     </TableCell>
                                     <TableCell>{contact.name}</TableCell>
                                     <TableCell align="center">
-                                        {(hideNum && user.profile === "user"
+                                        {((enableLGPD && hideNum && user.profile === "user")
                                             ? contact.isGroup
                                                 ? contact.number :
                                                 formatSerializedId(contact?.number) === null ? contact.number.slice(0, -6) + "**-**" + contact?.number.slice(-2) :
-                                                    formatSerializedId(contact?.number).slice(0, -6) + "**-**" + contact?.number.slice(-2) :
-                                            contact.isGroup ? contact.number : formatSerializedId(contact?.number)
+                                                    formatSerializedId(contact?.number)?.slice(0, -6) + "**-**" + contact?.number?.slice(-2) :
+                                                    contact.isGroup ? contact.number : formatSerializedId(contact?.number)
                                         )}
                                     </TableCell>
                                     <TableCell align="center">
                                         {contact.email}
                                     </TableCell>
-                                    <TableCell align="center">
+                                    {/* <TableCell align="center">
                                         {getDateLastMessage(contact)}
-                                    </TableCell>
+                                    </TableCell> */}
                                     <TableCell>{contact?.whatsapp?.name}</TableCell>
                                     <TableCell align="center">
                                         {contact.active ? (
@@ -612,6 +621,7 @@ const Contacts = () => {
                                     <TableCell align="center">
                                         <IconButton
                                             size="small"
+                                            disabled={!contact.active}
                                             onClick={() => {
                                                 setContactTicket(contact);
                                                 setNewTicketModalOpen(true);

@@ -8,7 +8,7 @@ import { Button, CircularProgress, Grid, TextField, Typography } from "@material
 import { Field, Form, Formik } from "formik";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
-import api from "../../services/api";
+
 import axios from "axios";
 import usePlans from "../../hooks/usePlans";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -40,7 +40,7 @@ const MessagesAPI = () => {
   const [formMessageTextData,] = useState({ token: '', number: '', body: '', userId: '', queueId: '' })
   const [formMessageMediaData,] = useState({ token: '', number: '', medias: '', body:'', userId: '', queueId: '' })
   const [file, setFile] = useState({})
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
 
   const { getPlanCompany } = usePlans();
 

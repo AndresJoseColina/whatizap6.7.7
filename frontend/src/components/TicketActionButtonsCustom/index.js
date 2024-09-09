@@ -3,8 +3,8 @@ import { useHistory } from "react-router-dom";
 
 import { Can } from "../Can";
 import { makeStyles } from "@material-ui/core/styles";
-import { IconButton } from "@material-ui/core";
-import { DeviceHubOutlined, History, PictureAsPdf, Replay, SwapHorizOutlined } from "@material-ui/icons";
+import { IconButton, Menu } from "@material-ui/core";
+import { DeviceHubOutlined, History, MoreVert, PictureAsPdf, Replay, SwapHorizOutlined } from "@material-ui/icons";
 import { v4 as uuidv4 } from "uuid";
 
 import { i18n } from "../../translate/i18n";
@@ -27,9 +27,7 @@ import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import AcceptTicketWithouSelectQueue from "../AcceptTicketWithoutQueueModal";
 
 //icones
-import EventIcon from "@material-ui/icons/Event";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import UndoIcon from '@material-ui/icons/Undo';
 
 import ScheduleModal from "../ScheduleModal";
@@ -38,8 +36,9 @@ import { Switch } from "@material-ui/core";
 import ShowTicketOpen from "../ShowTicketOpenModal";
 import { toast } from "react-toastify";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
-import ShowTicketLogModal from "../../components/ShowTicketLogModal";
+import ShowTicketLogModal from "../ShowTicketLogModal";
 import TicketMessagesDialog from "../TicketMessagesDialog";
+import { useTheme } from "@material-ui/styles";
 
 const useStyles = makeStyles(theme => ({
     actionButtons: {
@@ -79,21 +78,22 @@ const TicketActionButtonsCustom = ({ ticket
     // setForwardMessageModalOpen
 }) => {
     const classes = useStyles();
+    const theme = useTheme();
     const history = useHistory();
-    const isMounted = useRef(true);
+    const [isMounted, setIsMounted] = useState(true);
     const [loading, setLoading] = useState(false);
     const { user } = useContext(AuthContext);
-    const { setCurrentTicket } = useContext(TicketsContext);
+    const { setCurrentTicket, setTabOpen } = useContext(TicketsContext);
     const [open, setOpen] = React.useState(false);
     const formRef = React.useRef(null);
     const [confirmationOpen, setConfirmationOpen] = useState(false);
     const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
     const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
     const [contactId, setContactId] = useState(null);
-    const [acceptAudioMessage, setAcceptAudio] = useState(ticket.contact.acceptAudioMessage);
     const [acceptTicketWithouSelectQueueOpen, setAcceptTicketWithouSelectQueueOpen] = useState(false);
     const [showTicketLogOpen, setShowTicketLogOpen] = useState(false);
     const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
+    const [disableBot, setDisableBot] = useState(ticket.contact.disableBot);
 
     const [showSchedules, setShowSchedules] = useState(false);
     const [enableIntegration, setEnableIntegration] = useState(ticket.useIntegration);
@@ -106,18 +106,30 @@ const TicketActionButtonsCustom = ({ ticket
     const { get: getSetting } = useCompanySettings()
     const { getPlanCompany } = usePlans();
 
+
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+
     useEffect(() => {
-        async function fetchData() {
-            const companyId = user.companyId;
-            const planConfigs = await getPlanCompany(undefined, companyId);
-            setShowSchedules(planConfigs.plan.useSchedules);
-            setOpenTicketMessageDialog(false);
-        }
         fetchData();
-        setShowTicketLogOpen(false)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
+        // Cleanup function to set isMounted to false when the component unmounts
+        return () => {
+            setIsMounted(false);
+        };
     }, []);
 
+
+    const fetchData = async () => {
+        const companyId = user.companyId;
+        const planConfigs = await getPlanCompany(undefined, companyId);
+        setShowSchedules(planConfigs.plan.useSchedules);
+        setOpenTicketMessageDialog(false);
+        setDisableBot(ticket.contact.disableBot)
+
+        setShowTicketLogOpen(false)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
 
     const handleClickOpen = async (e) => {
         const setting = await getSetting({
@@ -159,18 +171,15 @@ const TicketActionButtonsCustom = ({ ticket
 
     };
 
-    const handleOpenScheduleModal = () => {
-        if (typeof handleClose == "function") handleClose();
-        setContactId(ticket.contact.id);
-        setScheduleModalOpen(true);
-    }
+    const handleMenu = event => {
+        setAnchorEl(event.currentTarget);
+        setMenuOpen(true);
+    };
 
-    const handleCloseScheduleModal = () => {
-        setScheduleModalOpen(false);
-        setContactId(null);
-    }
-
-
+    const handleCloseMenu = () => {
+        setAnchorEl(null);
+        setMenuOpen(false);
+    };
 
     const handleOpenTransferModal = (e) => {
         setTransferTicketModalOpen(true);
@@ -201,6 +210,11 @@ const TicketActionButtonsCustom = ({ ticket
         }
     };
 
+    const handleExportPDF = async () => {
+        setOpenTicketMessageDialog(true);
+        handleCloseMenu();
+    }
+
     const handleEnableIntegration = async () => {
         setLoading(true);
         try {
@@ -217,32 +231,26 @@ const TicketActionButtonsCustom = ({ ticket
     };
 
     const handleShowLogTicket = async () => {
-        setLoading(true);
-        try {
-            const { data } = await api.get(`/tickets-log/${ticket.id}`);
-            setLogTicket(data);
-            setShowTicketLogOpen(true);
-
-            setLoading(false);
-        } catch (err) {
-            setLoading(false);
-            toastError(err);
-        }
+        setShowTicketLogOpen(true);
     };
 
-    const handleContactToggleAcceptAudio = async () => {
+    const handleContactToggleDisableBot = async () => {
+
+        const { id } = ticket.contact;
+
+
         try {
-            const contact = await api.put(`/contacts/toggleAcceptAudio/${ticket.contact.id}`);
-            setAcceptAudio(contact.data.acceptAudioMessage);
+            const { data } = await api.put(`/contacts/toggleDisableBot/${id}`);
+            ticket.contact.disableBot = data.disableBot;
+            setDisableBot(data.disableBot)
+
         } catch (err) {
             toastError(err);
         }
     };
 
     const handleCloseTransferTicketModal = () => {
-        if (isMounted.current) {
-            setTransferTicketModalOpen(false);
-        }
+        setTransferTicketModalOpen(false);
     };
 
     const handleDeleteTicket = async () => {
@@ -255,12 +263,21 @@ const TicketActionButtonsCustom = ({ ticket
     };
 
     const handleSendMessage = async (id) => {
-        const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
+        let setting;
+
+        try {
+            setting = await getSetting({
+                "column": "greetingAcceptedMessage"
+            })
+        } catch (err) {
+            toastError(err);
+        }
+        const msg = `${setting.greetingAcceptedMessage}`; //`{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
         const message = {
             read: 1,
             fromMe: true,
             mediaUrl: "",
-            body: `*${i18n.t("mainDrawer.appBar.user.virtualAssistant")}:*\n${msg.trim()}`,
+            body: `${msg.trim()}`,
         };
         try {
             await api.post(`/messages/${id}`, message);
@@ -268,11 +285,7 @@ const TicketActionButtonsCustom = ({ ticket
             toastError(err);
         }
     };
-    const handleSelectTicket = (ticket) => {
-        const code = uuidv4();
-        const { id, uuid } = ticket;
-        setCurrentTicket({ id, uuid, code });
-    };
+
 
     const handleUpdateTicketStatus = async (e, status, userId) => {
         setLoading(true);
@@ -296,15 +309,27 @@ const TicketActionButtonsCustom = ({ ticket
                 handleSendMessage(ticket.id);
             }
 
+
+            // if (isMounted.current) {
             setLoading(false);
+            // }
             if (status === "open" || status === "group") {
                 setCurrentTicket({ ...ticket, code: "#" + status });
-                handleSelectTicket(ticket);
+                // handleSelectTicket(ticket);
+                setTimeout(() => {
+                    history.push('/tickets');
+                }, 0);
 
-                history.push(`/tickets/${ticket.uuid}`);
+                setTimeout(() => {
+                    history.push(`/tickets/${ticket.uuid}`);
+                    setTabOpen(status)
+                }, 10);
+
+
             } else {
                 setCurrentTicket({ id: null, code: null })
                 history.push("/tickets");
+
             }
         } catch (err) {
             setLoading(false);
@@ -324,19 +349,25 @@ const TicketActionButtonsCustom = ({ ticket
                     setOpenAlert(true)
                     setUserTicketOpen(otherTicket.data.user.name)
                     setQueueTicketOpen(otherTicket.data.queue.name)
+                    setTabOpen(otherTicket.isGroup ? "group" : "open")
                 } else {
                     setLoading(false);
-                    handleSelectTicket(otherTicket.data);
+                    // handleSelectTicket(otherTicket.data);
+                    setTabOpen(otherTicket.isGroup ? "group" : "open")
 
                     history.push(`/tickets/${otherTicket.data.uuid}`);
                 }
             } else {
-                if (isMounted.current) {
-                    setLoading(false);
-                }
+                // if (isMounted.current) {
+                setLoading(false);
+                // }
 
-                handleSelectTicket(ticket);
-                history.push(`/tickets/${ticket.uuid}`);
+                // handleSelectTicket(ticket);
+                history.push('/tickets');
+                setTimeout(() => {
+                    history.push(`/tickets/${ticket.uuid}`);
+                    setTabOpen(ticket.isGroup ? "group" : "open")
+                }, 1000)
             }
         } catch (err) {
             setLoading(false);
@@ -366,7 +397,7 @@ const TicketActionButtonsCustom = ({ ticket
                 <ShowTicketLogModal
                     isOpen={showTicketLogOpen}
                     handleClose={(e) => setShowTicketLogOpen(false)}
-                    logs={logTicket}
+                    ticketId={ticket.id}
                 />
             )}
             {openTicketMessageDialog && (
@@ -377,16 +408,6 @@ const TicketActionButtonsCustom = ({ ticket
                 />
             )}
             <div className={classes.actionButtons}>
-                <IconButton
-                    className={classes.bottomButtonVisibilityIcon}
-                    onClick={() => setOpenTicketMessageDialog(true)}
-                >
-                    <Tooltip title={i18n.t("ticketsList.buttons.exportAsPDF")}>
-                        <PictureAsPdf />
-
-                    </Tooltip>
-                </IconButton>
-
                 {ticket.status === "closed" && (ticket.queueId === null || ticket.queueId === undefined) && (
                     <ButtonWithSpinner
                         loading={loading}
@@ -406,7 +427,7 @@ const TicketActionButtonsCustom = ({ ticket
                         {i18n.t("messagesList.header.buttons.reopen")}
                     </ButtonWithSpinner>
                 )}
-                <IconButton
+                {/* <IconButton
                     className={classes.bottomButtonVisibilityIcon}
                     onClick={handleShowLogTicket}
                 >
@@ -414,13 +435,12 @@ const TicketActionButtonsCustom = ({ ticket
                         <History />
 
                     </Tooltip>
-                </IconButton>
+                </IconButton> */}
                 {(ticket.status === "open" || ticket.status === "group") && (
                     <>
                         {/* {!showSelectMessageCheckbox ? ( */}
                         <>
-
-                            <IconButton
+                            {/* <IconButton
                                 className={classes.bottomButtonVisibilityIcon}
                                 onClick={handleEnableIntegration}
                             >
@@ -428,7 +448,7 @@ const TicketActionButtonsCustom = ({ ticket
                                     {enableIntegration === true ? <DeviceHubOutlined style={{ color: "green" }} /> : <DeviceHubOutlined />}
 
                                 </Tooltip>
-                            </IconButton>
+                            </IconButton> */}
 
                             <IconButton className={classes.bottomButtonVisibilityIcon}>
                                 <Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
@@ -457,18 +477,8 @@ const TicketActionButtonsCustom = ({ ticket
                                 </Tooltip>
                             </IconButton>
                         </>
-                        {/* // ) : (
-                        //     <IconButton className={classes.bottomButtonVisibilityIcon}>
-                        //         <Tooltip title={i18n.t("messageOptionsMenu.forward")}>
-                        //             <BiSend
-                        //                 // color="primary"
-                        //                 onClick={handleOpenModalForward}
-                        //             />
-                        //         </Tooltip>
-                        //     </IconButton>
-                        // )} */}
 
-                        {showSchedules && (
+                        {/* {showSchedules && (
                             <>
                                 <IconButton className={classes.bottomButtonVisibilityIcon}>
                                     <Tooltip title={i18n.t("tickets.buttons.scredule")}>
@@ -479,33 +489,20 @@ const TicketActionButtonsCustom = ({ ticket
                                     </Tooltip>
                                 </IconButton>
                             </>
-                        )}
+                        )} */}
 
                         <MenuItem className={classes.bottomButtonVisibilityIcon}>
-                            <Tooltip title={i18n.t("ticketOptionsMenu.acceptAudioMessage")}>
+                            <Tooltip title={i18n.t("contactModal.form.chatBotContact")}>
                                 <Switch
                                     size="small"
                                     // color="primary"
-                                    checked={acceptAudioMessage}
-                                    onChange={() => handleContactToggleAcceptAudio()}
+                                    checked={disableBot}
+                                    onChange={() => handleContactToggleDisableBot()}
                                 />
                             </Tooltip>
                         </MenuItem>
 
-                        <Can
-                            role={user.profile}
-                            perform="ticket-options:deleteTicket"
-                            yes={() => (
-                                <IconButton className={classes.bottomButtonVisibilityIcon}>
-                                    <Tooltip title={i18n.t("tickets.buttons.deleteTicket")}>
-                                        <DeleteOutlineIcon
-                                            // color="primary"
-                                            onClick={handleOpenConfirmationModal}
-                                        />
-                                    </Tooltip>
-                                </IconButton>
-                            )}
-                        />
+
 
                         {confirmationOpen && (
                             <ConfirmationModal
@@ -525,14 +522,14 @@ const TicketActionButtonsCustom = ({ ticket
                                 ticket={ticket}
                             />
                         )}
-                        {scheduleModalOpen && (
+                        {/* {scheduleModalOpen && (
                             <ScheduleModal
                                 open={scheduleModalOpen}
                                 onClose={handleCloseScheduleModal}
                                 aria-labelledby="form-dialog-title"
                                 contactId={contactId}
                             />
-                        )}
+                        )} */}
 
                     </>
                 )}
@@ -557,6 +554,51 @@ const TicketActionButtonsCustom = ({ ticket
                         {i18n.t("messagesList.header.buttons.accept")}
                     </ButtonWithSpinner>
                 )}
+                <IconButton
+                    aria-label="account of current user"
+                    aria-controls="menu-appbar"
+                    aria-haspopup="true"
+                    onClick={handleMenu}
+                    color="inherit"
+                    style={{ paddingHorizontal: 3, paddingTop: 10 }}
+                >
+                    <MoreVert style={{ fontSize: 16, padding: 0 }} />
+                </IconButton>
+                <Menu
+                    id="menu-appbar"
+                    anchorEl={anchorEl}
+                    getContentAnchorEl={null}
+                    anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right",
+                    }}
+                    keepMounted
+                    transformOrigin={{
+                        vertical: "top",
+                        horizontal: "right",
+                    }}
+                    open={menuOpen}
+                    onClose={handleCloseMenu}
+                >
+                    <MenuItem onClick={handleOpenConfirmationModal}>
+                        <Can
+                            role={user.profile}
+                            perform="ticket-options:deleteTicket"
+                            yes={() => (
+                                i18n.t("tickets.buttons.deleteTicket")
+                            )}
+                        />
+                    </MenuItem>
+                    <MenuItem onClick={handleEnableIntegration}>
+                        {enableIntegration === true ? i18n.t("messagesList.header.buttons.disableIntegration") : i18n.t("messagesList.header.buttons.enableIntegration")}
+                    </MenuItem>
+                    <MenuItem onClick={handleShowLogTicket}>
+                        {i18n.t("messagesList.header.buttons.logTicket")}
+                    </MenuItem>
+                    <MenuItem onClick={handleExportPDF}>
+                        {i18n.t("ticketsList.buttons.exportAsPDF")}
+                    </MenuItem>
+                </Menu>
             </div>
             <>
                 <Formik
@@ -581,14 +623,14 @@ const TicketActionButtonsCustom = ({ ticket
                                 <DialogActions className={classes.botoes}>
                                     <Button
                                         onClick={e => handleCloseTicketWithoutFarewellMsg()}
-                                        style={{ background: "#065183", color: "white" }}
+                                        style={{ background: theme.palette.primary.main, color: "white" }}
                                     >
                                         {i18n.t("messagesList.header.dialogRatingWithoutFarewellMsg")}
                                     </Button>
 
                                     <Button
                                         onClick={e => handleUpdateTicketStatus(e, "closed", user?.id, ticket?.queue?.id)}
-                                        style={{ background: "#065183", color: "white" }}
+                                        style={{ background: theme.palette.primary.main, color: "white" }}
                                     >
                                         {i18n.t("messagesList.header.dialogRatingCancel")}
                                     </Button>

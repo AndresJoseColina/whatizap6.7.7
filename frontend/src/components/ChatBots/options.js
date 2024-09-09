@@ -87,7 +87,7 @@ export default function VerticalLinearStepper(props) {
   const [users, setUsers] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [file, setFile] = useState([]);
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const [searchParam, setSearchParam] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedQueue, setSelectedQueue] = useState("");

@@ -1,4 +1,4 @@
-import api from "../../services/api";
+import api, { openApi } from "../../services/api";
 
 const useSettings = () => {
   const getAll = async (params) => {
@@ -16,13 +16,27 @@ const useSettings = () => {
       method: "PUT",
       data,
     });
+    console.log(responseData);
     return responseData;
   };
 
-  const get = async (param: string) => {
+  const get = async (param) => {
     const { data } = await api.request({
       url: `/setting/${param}`,
       method: "GET",
+    });
+    return data;
+  };
+
+  const getPublicSetting = async (key) => {
+    const params = {
+      token: "wtV"
+    }
+
+    const { data } = await openApi.request({
+        url: `/public-settings/${key}`,
+        method: 'GET',
+        params
     });
     return data;
   };
@@ -31,6 +45,7 @@ const useSettings = () => {
     getAll,
     update,
     get,
+    getPublicSetting,
   };
 };
 

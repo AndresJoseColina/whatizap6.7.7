@@ -77,7 +77,7 @@ const QuickeMessageSchema = Yup.object().shape({
 const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
-  const { profile } = user;
+
   const messageInputRef = useRef();
 
   const initialState = {
@@ -91,8 +91,6 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
   const [quickemessage, setQuickemessage] = useState(initialState);
   const [attachment, setAttachment] = useState(null);
   const attachmentFile = useRef(null);
-
-
 
   useEffect(() => {
     try {
@@ -126,7 +124,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
   const handleSaveQuickeMessage = async (values) => {
 
     const quickemessageData = { ...values, isMedia: true, mediaPath: attachment ? String(attachment.name).replace(/ /g, "_") : values.mediaPath ? path.basename(values.mediaPath).replace(/ /g, "_") : null };
-    
+
     try {
       if (quickemessageId) {
         await api.put(`/quick-messages/${quickemessageId}`, quickemessageData);
@@ -244,6 +242,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                       autoFocus
                       label={i18n.t("quickMessages.dialog.shortcode")}
                       name="shortcode"
+                      disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       error={touched.shortcode && Boolean(errors.shortcode)}
                       helperText={touched.shortcode && errors.shortcode}
                       variant="outlined"
@@ -261,6 +260,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                       helperText={touched.message && errors.message}
                       variant="outlined"
                       margin="dense"
+                      disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       multiline={true}
                       rows={7}
                       fullWidth
@@ -269,53 +269,57 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                   </Grid>
                   <Grid item>
                     <MessageVariablesPicker
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
                       onClick={value => handleClickMsgVar(value, setFieldValue)}
                     />
                   </Grid>
                   {/* {(profile === "admin" || profile === "supervisor") && ( */}
-                    <Grid xs={12} item>
+                  <Grid xs={12} item>
+                    <FormControl variant="outlined" margin="dense" fullWidth>
+                      <InputLabel id="geral-selection-label">
+                        {i18n.t("quickMessages.dialog.visao")}
+                      </InputLabel>
+                      <Field
+                        as={Select}
+                        label={i18n.t("quickMessages.dialog.visao")}
+                        placeholder={i18n.t("quickMessages.dialog.visao")}
+                        labelId="visao-selection-label"
+                        id="visao"
+                        disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
+                        name="visao"
+                        onChange={(e) => {
+                          setFieldValue("visao", e.target.value === "true");
+                        }}
+                        error={touched.visao && Boolean(errors.visao)}
+                        value={values.visao ? "true" : "false"} // Converte o valor booleano para string
+                      >
+                        <MenuItem value={"true"}>{i18n.t("announcements.active")}</MenuItem>
+                        <MenuItem value={"false"}>{i18n.t("announcements.inactive")}</MenuItem>
+                      </Field>
+                    </FormControl>
+                    {/* Renderização condicional do novo item */}
+                    {values.visao === true && (
                       <FormControl variant="outlined" margin="dense" fullWidth>
                         <InputLabel id="geral-selection-label">
-                          {i18n.t("quickMessages.dialog.visao")}
+                          {i18n.t("quickMessages.dialog.geral")}
                         </InputLabel>
                         <Field
                           as={Select}
-                          label={i18n.t("quickMessages.dialog.visao")}
-                          placeholder={i18n.t("quickMessages.dialog.visao")}
-                          labelId="visao-selection-label"
-                          id="visao"
-                          name="visao"
-                          error={touched.visao && Boolean(errors.visao)}
-                          value={values.visao ? "true" : "false"} // Converte o valor booleano para string
-                          >
+                          label={i18n.t("quickMessages.dialog.geral")}
+                          placeholder={i18n.t("quickMessages.dialog.geral")}
+                          labelId="novo-item-selection-label"
+                          id="geral"
+                          name="geral"
+                          disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
+                          value={values.geral ? "true" : "false"} // Converte o valor booleano para string
+                          error={touched.geral && Boolean(errors.geral)}
+                        >
                           <MenuItem value={"true"}>{i18n.t("announcements.active")}</MenuItem>
                           <MenuItem value={"false"}>{i18n.t("announcements.inactive")}</MenuItem>
                         </Field>
                       </FormControl>
-
-                      {/* Renderização condicional do novo item */}
-                      {values.visao === true && (
-                        <FormControl variant="outlined" margin="dense" fullWidth>
-                          <InputLabel id="geral-selection-label">
-                            {i18n.t("quickMessages.dialog.geral")}
-                          </InputLabel>
-                          <Field
-                            as={Select}
-                            label={i18n.t("quickMessages.dialog.geral")}
-                            placeholder={i18n.t("quickMessages.dialog.geral")}
-                            labelId="novo-item-selection-label"
-                            id="geral"
-                            name="geral"
-                            value={values.geral ? "true" : "false"} // Converte o valor booleano para string
-                            error={touched.geral && Boolean(errors.geral)}
-                          >
-                            <MenuItem value={"true"}>{i18n.t("announcements.active")}</MenuItem>
-                          <MenuItem value={"false"}>{i18n.t("announcements.inactive")}</MenuItem>
-                          </Field>
-                        </FormControl>
-                      )}
-                    </Grid>
+                    )}
+                  </Grid>
                   {/* )} */}
                   {(quickemessage.mediaPath || attachment) && (
                     <Grid xs={12} item>
@@ -325,6 +329,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                       <IconButton
                         onClick={() => setConfirmationOpen(true)}
                         color="secondary"
+                        disabled={quickemessageId && values.visao && !values.geral && values.userId !== user.id}
                       >
                         <DeleteOutlineIcon color="secondary" />
                       </IconButton>
@@ -337,7 +342,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                   <Button
                     color="primary"
                     onClick={() => attachmentFile.current.click()}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
                     variant="outlined"
                   >
                     {i18n.t("quickMessages.buttons.attach")}
@@ -354,7 +359,7 @@ const QuickMessageDialog = ({ open, onClose, quickemessageId, reload }) => {
                 <Button
                   type="submit"
                   color="primary"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (quickemessageId && values.visao && !values.geral && values.userId !== user.id)}
                   variant="contained"
                   className={classes.btnWrapper}
                 >

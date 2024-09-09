@@ -78,7 +78,7 @@ export default function ChatMessages({
   loading,
 }) {
   const classes = useStyles();
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const { datetimeToClient } = useDate();
   const baseRef = useRef();
 

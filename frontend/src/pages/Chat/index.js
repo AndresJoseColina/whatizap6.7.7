@@ -19,7 +19,7 @@ import ChatList from "./ChatList";
 import ChatMessages from "./ChatMessages";
 import { UsersFilter } from "../../components/UsersFilter";
 import api from "../../services/api";
-import { socketConnection } from "../../services/socket";
+// import { SocketContext } from "../../context/Socket/SocketContext";
 
 import { has, isObject } from "lodash";
 
@@ -129,15 +129,15 @@ export function ChatModal({
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} color="primary">
-        {i18n.t("chatInternal.modal.cancel")}
+          {i18n.t("chatInternal.modal.cancel")}
         </Button>
-        <Button 
-          onClick={handleSave} 
-          color="primary" 
+        <Button
+          onClick={handleSave}
+          color="primary"
           variant="contained"
-          disabled={users===undefined || users.length === 0 || title === null || title === "" || title === undefined}
+          disabled={users === undefined || users.length === 0 || title === null || title === "" || title === undefined}
         >
-        {i18n.t("chatInternal.modal.save")}
+          {i18n.t("chatInternal.modal.save")}
         </Button>
       </DialogActions>
     </Dialog>
@@ -146,7 +146,7 @@ export function ChatModal({
 
 function Chat(props) {
   const classes = useStyles();
-  const { user } = useContext(AuthContext);
+  const { user, socket } = useContext(AuthContext);
   const history = useHistory();
 
   const [showDialog, setShowDialog] = useState(false);
@@ -202,9 +202,11 @@ function Chat(props) {
 
   useEffect(() => {
     const companyId = user.companyId;
-    const socket = socketConnection({ companyId, userId: user.id });
+    // const socket = socketConnection({ companyId, userId: user.id });
 
-    socket.on(`company-${companyId}-chat-user-${user.id}`, (data) => {
+    const onChatUser = (data) => {
+
+      console.log(data)
       if (data.action === "create") {
         setChats((prev) => [data.record, ...prev]);
       }
@@ -220,9 +222,8 @@ function Chat(props) {
         });
         setChats(changedChats);
       }
-    });
-
-    socket.on(`company-${companyId}-chat`, (data) => {
+    }
+    const onChat = (data) => {
       if (data.action === "delete") {
         const filteredChats = chats.filter((c) => c.id !== +data.id);
         setChats(filteredChats);
@@ -232,41 +233,49 @@ function Chat(props) {
         setCurrentChat({});
         history.push("/chats");
       }
-    });
+    }
 
+    const onCurrentChat = (data) => {
+      if (data.action === "new-message") {
+        setMessages((prev) => [...prev, data.newMessage]);
+        const changedChats = chats.map((chat) => {
+          if (chat.id === data.newMessage.chatId) {
+            return {
+              ...data.chat,
+            };
+          }
+          return chat;
+        });
+        setChats(changedChats);
+        scrollToBottomRef.current();
+      }
+
+      if (data.action === "update") {
+        const changedChats = chats.map((chat) => {
+          if (chat.id === data.chat.id) {
+            return {
+              ...data.chat,
+            };
+          }
+          return chat;
+        });
+        setChats(changedChats);
+        scrollToBottomRef.current();
+      }
+    }
+
+    socket.on(`company-${companyId}-chat-user-${user.id}`, onChatUser);
+    socket.on(`company-${companyId}-chat`, onChat);
     if (isObject(currentChat) && has(currentChat, "id")) {
-      socket.on(`company-${companyId}-chat-${currentChat.id}`, (data) => {
-        if (data.action === "new-message") {
-          setMessages((prev) => [...prev, data.newMessage]);
-          const changedChats = chats.map((chat) => {
-            if (chat.id === data.newMessage.chatId) {
-              return {
-                ...data.chat,
-              };
-            }
-            return chat;
-          });
-          setChats(changedChats);
-          scrollToBottomRef.current();
-        }
-
-        if (data.action === "update") {
-          const changedChats = chats.map((chat) => {
-            if (chat.id === data.chat.id) {
-              return {
-                ...data.chat,
-              };
-            }
-            return chat;
-          });
-          setChats(changedChats);
-          scrollToBottomRef.current();
-        }
-      });
+      socket.on(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
     }
 
     return () => {
-      socket.disconnect();
+      socket.off(`company-${companyId}-chat-user-${user.id}`, onChatUser);
+      socket.off(`company-${companyId}-chat`, onChat);
+      if (isObject(currentChat) && has(currentChat, "id")) {
+        socket.off(`company-${companyId}-chat-${currentChat.id}`, onCurrentChat);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentChat]);
@@ -329,18 +338,18 @@ function Chat(props) {
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={3} item>
           {/* {user.profile === "admin" && ( */}
-            <div className={classes.btnContainer}>
-              <Button
-                onClick={() => {
-                  setDialogType("new");
-                  setShowDialog(true);
-                }}
-                color="primary"
-                variant="contained"
-              >
-                {i18n.t("chatInternal.new")}
-              </Button>
-            </div>
+          <div className={classes.btnContainer}>
+            <Button
+              onClick={() => {
+                setDialogType("new");
+                setShowDialog(true);
+              }}
+              color="primary"
+              variant="contained"
+            >
+              {i18n.t("chatInternal.new")}
+            </Button>
+          </div>
           {/* )} */}
           <ChatList
             chats={chats}

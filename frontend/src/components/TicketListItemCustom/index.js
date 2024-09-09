@@ -4,14 +4,14 @@ import { useHistory, useParams } from "react-router-dom";
 import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { green, grey } from "@material-ui/core/colors";
 import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
-import { Tooltip } from "@material-ui/core";
+import { List, Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import toastError from "../../errors/toastError";
@@ -27,11 +27,11 @@ import { isNil } from "lodash";
 import { toast } from "react-toastify";
 import { Done, HighlightOff, Replay, SwapHoriz } from "@material-ui/icons";
 import useCompanySettings from "../../hooks/useSettings/companySettings";
-import { Avatar, Badge, Divider, ListItem, ListItemAvatar, ListItemButton, ListItemSecondaryAction, ListItemText, Typography } from "@mui/material";
+import { Avatar, Badge, ListItemAvatar, ListItem, ListItemSecondaryAction, ListItemText, Typography } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
     ticket: {
-        position: "relative",
+        position: "relative"
     },
 
     pendingTicket: {
@@ -194,8 +194,9 @@ const useStyles = makeStyles((theme) => ({
     }
 }));
 
-const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
+const TicketListItemCustom = ({ setTabOpen, ticket }) => {
     const classes = useStyles();
+    const theme = useTheme();
     const history = useHistory();
     const [loading, setLoading] = useState(false);
     const [acceptTicketWithouSelectQueueOpen, setAcceptTicketWithouSelectQueueOpen] = useState(false);
@@ -211,6 +212,12 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
     const { user } = useContext(AuthContext);
 
     const { get: getSetting } = useCompanySettings();
+
+    useEffect(() => {
+        console.log("======== TicketListItemCustom ===========")
+        console.log(ticket)
+        console.log("=========================================")
+    }, [ticket])
 
     useEffect(() => {
         return () => {
@@ -245,6 +252,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                     if (isMounted.current) {
                         setLoading(false);
                     }
+
                     history.push(`/tickets/`);
                 }
             } catch (err) {
@@ -266,6 +274,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
             if (isMounted.current) {
                 setLoading(false);
             }
+
             history.push(`/tickets/`);
         }
 
@@ -288,6 +297,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
         if (isMounted.current) {
             setLoading(false);
         }
+
         history.push(`/tickets/`);
     };
 
@@ -313,7 +323,10 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
             setLoading(false);
         }
         handleSelectTicket(ticket);
+        // history.push('/tickets');
+        // setTimeout(() => {
         history.push(`/tickets/${ticket.uuid}`);
+        // }, 0);
     }
 
     const handleAcepptTicket = async (id) => {
@@ -331,9 +344,12 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                     setQueueTicketOpen(otherTicket.data.queue.name);
                 } else {
                     setLoading(false);
-                    handleChangeTab(null, ticket.isGroup ? "group" : "open");
+                    setTabOpen(ticket.isGroup ? "group" : "open");
                     handleSelectTicket(otherTicket.data);
-                    history.push(`/tickets/${otherTicket.data.uuid}`);
+                    // history.push('/tickets');
+                    // setTimeout(() => {
+                    history.push(`/tickets/${otherTicket.uuid}`);
+                    // }, 0);
                 }
             } else {
                 let setting;
@@ -345,7 +361,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                 } catch (err) {
                     toastError(err);
                 }
-                console.log(ticket)
+
                 if (setting.sendGreetingAccepted === "enabled" && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled")) {
                     handleSendMessage(ticket.id);
                 }
@@ -353,9 +369,12 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                     setLoading(false);
                 }
 
-                handleChangeTab(null, ticket.isGroup ? "group" : "open");
+                setTabOpen(ticket.isGroup ? "group" : "open");
                 handleSelectTicket(ticket);
+                // history.push('/tickets');
+                // setTimeout(() => {
                 history.push(`/tickets/${ticket.uuid}`);
+                // }, 0);
             }
         } catch (err) {
             setLoading(false);
@@ -365,12 +384,23 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
 
 
     const handleSendMessage = async (id) => {
-        const msg = `{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
+
+        let setting;
+
+        try {
+            setting = await getSetting({
+                "column": "greetingAcceptedMessage"
+            })
+        } catch (err) {
+            toastError(err);
+        }
+
+        const msg = `${setting.greetingAcceptedMessage}`; //`{{ms}} *{{name}}*, ${i18n.t("mainDrawer.appBar.user.myName")} *${user?.name}* ${i18n.t("mainDrawer.appBar.user.continuity")}.`;
         const message = {
             read: 1,
             fromMe: true,
             mediaUrl: "",
-            body: `*${i18n.t("mainDrawer.appBar.user.virtualAssistant")}:*\n${msg.trim()}`,
+            body: `${msg.trim()}`,
         };
         try {
             await api.post(`/messages/${id}`, message);
@@ -421,9 +451,18 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                 handleClose={() => setOpenTicketMessageDialog(false)}
                 ticketId={ticket.id}
             /> */}
-
-            <ListItemButton dense
+            <ListItem
+                button
+                dense
                 onClick={(e) => {
+                    console.log('e', e)
+                    const isCheckboxClicked = (e.target.tagName.toLowerCase() === 'input' && e.target.type === 'checkbox')
+                        || (e.target.tagName.toLowerCase() === 'svg' && e.target.type === undefined)
+                        || (e.target.tagName.toLowerCase() === 'path' && e.target.type === undefined);
+                    // Se o clique foi no Checkbox, não execute handleSelectTicket
+
+                    if (isCheckboxClicked) return;
+
                     handleSelectTicket(ticket);
                 }}
                 selected={ticketId && ticketId === ticket.uuid}
@@ -432,10 +471,10 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                 })}
             >
                 <ListItemAvatar
-                    sx={{ marginLeft: "-15px" }}
+                    style={{ marginLeft: "-15px" }}
                 >
                     <Avatar
-                        sx={{
+                        style={{
                             width: "50px",
                             height: "50px",
                             borderRadius: "50%",
@@ -502,9 +541,9 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                                     <br />
                                 )}
                                 <span className={classes.secondaryContentSecond} >
-                                    {ticket?.whatsapp ? <Badge className={classes.connectionTag}>{ticket.whatsapp?.name.toUpperCase()}</Badge> : <br></br>}
-                                    {<Badge sx={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queueId ? ticket.queue?.name.toUpperCase() : ticket.status === "lgpd" ? "LGPD": "SIN FILA"}</Badge>}
-                                    {ticket?.user && (<Badge sx={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
+                                    {ticket?.whatsapp ? <Badge className={classes.connectionTag} style={{ backgroundColor: ticket.channel === "whatsapp" ? "#25D366" : ticket.channel === "facebook" ? "#4267B2" : "#E1306C" }}>{ticket.whatsapp?.name.toUpperCase()}</Badge> : <br></br>}
+                                    {<Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queueId ? ticket.queue?.name.toUpperCase() : ticket.status === "lgpd" ? "LGPD" : "SEM FILA"}</Badge>}
+                                    {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
                                 </span>
                                 <span className={classes.secondaryContentSecond} >
                                     {
@@ -557,7 +596,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "pending" && (ticket.queueId === null || ticket.queueId === undefined)) && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'green', padding: '0px', borderRadius: "50%", right: '51px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', borderRadius: "50%", right: '51px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -574,7 +613,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "pending" && ticket.queueId !== null) && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'green', padding: '0px', borderRadius: "50%", right: '51px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', borderRadius: "50%", right: '51px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -591,7 +630,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "pending" || ticket.status === "open" || ticket.status === "group") && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'purple', padding: '0px', borderRadius: "50%", right: '26px', position: 'absolute', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', borderRadius: "50%", right: '26px', position: 'absolute', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -609,7 +648,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "open" || ticket.status === "group") && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'red', padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -627,7 +666,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {((ticket.status === "pending" || ticket.status === "lgpd") && (user.userClosePendingTicket === "enabled" || user.profile === "admin")) && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'red', padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -644,7 +683,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "closed" && (ticket.queueId === null || ticket.queueId === undefined)) && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'orange', padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -662,7 +701,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         {(ticket.status === "closed" && ticket.queueId !== null) && (
                             <ButtonWithSpinner
                                 //color="primary"
-                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: 'orange', padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
+                                style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', bottom: '0px', borderRadius: "50%", right: '1px', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
                                 variant="contained"
                                 className={classes.acceptButton}
                                 size="small"
@@ -677,8 +716,7 @@ const TicketListItemCustom = ({ handleChangeTab, ticket }) => {
                         )}
                     </span>
                 </ListItemSecondaryAction>
-            </ListItemButton>
-
+            </ListItem>
             {/* <Divider variant="inset" component="li" /> */}
         </React.Fragment>
     );

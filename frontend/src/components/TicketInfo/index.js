@@ -1,71 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { i18n } from "../../translate/i18n";
-import { makeStyles } from "@material-ui/core/styles";
-import { Avatar, CardHeader } from "@mui/material";
-
-const useStyles = makeStyles(theme => ({
-	userQueueStyle: {
-		// position: "absolute",
-		marginRight: 5,
-		// left: 10,
-		// bottom: 5,
-		color: "#ffffff",
-		// background: theme.palette.total,
-		padding: "1px 5px",
-		borderRadius: "3px",
-		fontWeight: 'bold',
-		fontSize: "0.8em",
-		display: "inline-flex"
-	},
-}));
+import { Avatar, CardHeader, Grid, TextField, Input, InputAdornment, InputLabel } from "@material-ui/core";
+import { TagsKanbanContainer } from "../TagsKanbanContainer";
 
 const TicketInfo = ({ contact, ticket, onClick }) => {
-	const classes = useStyles();
+	const [amount, setAmount] = useState("");
 
-	const { user } = ticket
-	const [userName, setUserName] = useState('')
-	const [contactName, setContactName] = useState('')
-
-	useEffect(() => {
-		if (contact) {
-			setContactName(contact.name);
-			if (document.body.offsetWidth < 600) {
-				if (contact.name.length > 10) {
-					const truncadName = contact.name.substring(0, 10) + '...';
-					setContactName(truncadName);
-				}
-			}
-		}
-
-		if (user && contact) {
-			setUserName(`${i18n.t("messagesList.header.assignedTo")} ${user.name}`);
-
-			if (document.body.offsetWidth < 600) {
-				setUserName(`${user.name}`);
-			}
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [contact])
-
-	return (
+	const renderCardReader = () => {
+		return (
 			<CardHeader
 				onClick={onClick}
-				sx={{ cursor: "pointer" }}
+				style={{ cursor: "pointer" }}
 				titleTypographyProps={{ noWrap: true }}
 				subheaderTypographyProps={{ noWrap: true }}
-				avatar={
-					<Avatar
-						src={`${contact?.urlPicture}`}
-						alt="contact_image"
-						sx={{
-							width: "50px",
-							height: "50px",
-							borderRadius: "50%"
-						}}
-					/>}
-				title={`${contactName} #${ticket.id}`}
-				subheader={ticket.user && `${userName}`}
+				avatar={<Avatar src={contact?.urlPicture} alt="contact_image" />}
+				title={`${contact?.name || '(sem contato)'} #${ticket.id}`}
+				subheader={
+					ticket.user &&
+					`${i18n.t("messagesList.header.assignedTo")} ${ticket.user.name}`
+				}
+
 			/>
+		);
+	}
+
+	const handleChange = (event) => {
+		const value = event.target.value;
+
+		setAmount(value);
+	}
+
+
+	return (
+		<React.Fragment>
+			<Grid container alignItems="center" spacing={10}>
+				{/* Conteúdo do contato à esquerda */}
+				<Grid item xs={6}>
+					{renderCardReader()}
+				</Grid>
+			</Grid>
+		</React.Fragment>
 	);
 };
 
