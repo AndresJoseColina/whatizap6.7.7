@@ -12,11 +12,11 @@ import makeWASocket, {
   jidNormalizedUser,
   makeCacheableSignalKeyStore,
   makeInMemoryStore,
-} from "@whiskeysockets/baileys";
+} from "baileys";
 import { FindOptions } from "sequelize/types";
 import Whatsapp from "../models/Whatsapp";
 import logger from "../utils/logger";
-import MAIN_LOGGER from "@whiskeysockets/baileys/lib/Utils/logger";
+import MAIN_LOGGER from "baileys/lib/Utils/logger";
 import { useMultiFileAuthState } from "../helpers/useMultiFileAuthState";
 import { Boom } from "@hapi/boom";
 import AppError from "../errors/AppError";
@@ -44,7 +44,6 @@ const msgCache = new NodeCache({
   checkperiod: 300,
   useClones: false
 });
-
 const loggerBaileys = MAIN_LOGGER.child({});
 loggerBaileys.level = "error";
 
@@ -158,7 +157,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         const { id, name, allowGroup, companyId } = whatsappUpdate;
 
         // const { version, isLatest } = await fetchLatestWaWebVersion({});
-        const versionB = [2, 2410, 1];
+        const versionB = [2, 3000, 1015901307];
         // logger.info(`using WA v${version.join(".")}, isLatest: ${isLatest}`);
         logger.info(`Starting session ${name}`);
         let retriesQrCode = 0;
@@ -170,7 +169,7 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         const { state, saveCreds } = await useMultiFileAuthState(whatsapp);
 
         wsocket = makeWASocket({
-          version: [2, 2413, 1],
+          version: [2, 3000, 1015901307],
           logger: loggerBaileys,
           printQRInTerminal: false,
           // auth: state as AuthenticationState,
