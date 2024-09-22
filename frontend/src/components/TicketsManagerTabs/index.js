@@ -307,7 +307,7 @@ const TicketsManagerTabs = () => {
   const [tab, setTab] = useState("open");
   // const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
-  const [showAllTickets, setShowAllTickets] = useState(false);
+  const [showAllTickets, setShowAllTickets] = useState(true);
   const [sortTickets, setSortTickets] = useState(false);
 
   const searchInputRef = useRef();
@@ -347,7 +347,7 @@ const TicketsManagerTabs = () => {
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN" || user.allUserChat.toUpperCase() === "ENABLED") {
-      setShowAllTickets(false);
+      setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -722,7 +722,9 @@ const TicketsManagerTabs = () => {
                 <AddIcon className={classes.icon} />
               </IconButton>
             </Badge>
-            {user.profile === "admin" && (
+            {/* Fechas todos os atendimento desativado/ativado */}
+
+            {/* {user.profile === "admin" && (
               <Badge
                 color="primary"
                 invisible={
@@ -744,7 +746,7 @@ const TicketsManagerTabs = () => {
                   <PlaylistAddCheckOutlined style={{ color: theme.mode === "light" ? "green" : "#FFF" }} />
                 </IconButton>
               </Badge>
-            )}
+            )} */}
             <Badge
               // color="primary"
               invisible={
