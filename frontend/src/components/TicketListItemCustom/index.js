@@ -3,11 +3,10 @@ import React, { useState, useEffect, useRef, useContext, useCallback } from "rea
 import { useHistory, useParams } from "react-router-dom";
 import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
-
+import RedoIcon from '@mui/icons-material/Redo';
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { green, grey } from "@material-ui/core/colors";
 import { i18n } from "../../translate/i18n";
-
 import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -212,6 +211,55 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
     const { user } = useContext(AuthContext);
 
     const { get: getSetting } = useCompanySettings();
+    const handleUpdateTicketStatus = async (e, status, userId) => {
+        setLoading(true);
+        try {
+            await api.put(`/tickets/${ticket.id}`, {
+                status: status,
+                userId: userId || null,
+            });
+
+            let setting;
+
+            try {
+                setting = await getSetting({
+                    "column": "sendGreetingAccepted"
+                })
+            } catch (err) {
+                toastError(err);
+            }
+
+            if (setting?.sendGreetingAccepted === "enabled" && (!ticket.isGroup || ticket.whatsapp?.groupAsTicket === "enabled") && ticket.status === "pending") {
+                handleSendMessage(ticket.id);
+            }
+
+
+            // if (isMounted.current) {
+            setLoading(false);
+            // }
+            if (status === "open" || status === "group") {
+                setCurrentTicket({ ...ticket, code: "#" + status });
+                // handleSelectTicket(ticket);
+                setTimeout(() => {
+                    history.push('/tickets');
+                }, 0);
+
+                setTimeout(() => {
+                    history.push(`/tickets/${ticket.uuid}`);
+                    setTabOpen(status)
+                }, 10);
+
+
+            } else {
+                setCurrentTicket({ id: null, code: null })
+                history.push("/tickets");
+
+            }
+        } catch (err) {
+            setLoading(false);
+            toastError(err);
+        }
+    };
 
     useEffect(() => {
         console.log("======== TicketListItemCustom ===========")
@@ -544,6 +592,7 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                     {ticket?.whatsapp ? <Badge className={classes.connectionTag} style={{ backgroundColor: ticket.channel === "whatsapp" ? "#25D366" : ticket.channel === "facebook" ? "#4267B2" : "#E1306C" }}>{ticket.whatsapp?.name.toUpperCase()}</Badge> : <br></br>}
                                     {<Badge style={{ backgroundColor: ticket.queue?.color || "#7c7c7c" }} className={classes.connectionTag}>{ticket.queueId ? ticket.queue?.name.toUpperCase() : ticket.status === "lgpd" ? "LGPD" : "SEM FILA"}</Badge>}
                                     {ticket?.user && (<Badge style={{ backgroundColor: "#000000" }} className={classes.connectionTag}>{ticket.user?.name.toUpperCase()}</Badge>)}
+                                    
                                 </span>
                                 <span className={classes.secondaryContentSecond} >
                                     {
@@ -627,7 +676,7 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                         )}
                     </span>
                     <span className={classes.secondaryContentSecond1} >
-                        {(ticket.status === "pending" || ticket.status === "open" || ticket.status === "group") && (
+                        {(ticket.status === "pending" || ticket.status === "open") && (
                             <ButtonWithSpinner
                                 //color="primary"
                                 style={{ backgroundColor: 'transparent', boxShadow: 'none', border: 'none', color: theme.mode === "light" ? "#0872B9" : "#FFF", padding: '0px', borderRadius: "50%", right: '26px', position: 'absolute', fontSize: '0.6rem', bottom: '-30px', minWidth: '2em', width: 'auto' }}
@@ -653,10 +702,10 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                                 className={classes.acceptButton}
                                 size="small"
                                 loading={loading}
-                                onClick={e => handleCloseTicket(ticket.id)}
+                                onClick={(e) => handleUpdateTicketStatus(e, "pending", null)}
                             >
-                                <Tooltip title={`${i18n.t("ticketsList.buttons.closed")}`}>
-                                    <HighlightOff />
+                                <Tooltip title={i18n.t("tickets.buttons.returnQueue")}>
+                                    <RedoIcon />
                                     {/*  */}
                                 </Tooltip>
                             </ButtonWithSpinner>
