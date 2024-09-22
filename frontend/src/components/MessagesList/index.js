@@ -785,7 +785,7 @@ const renderTicketsSeparator = (message, index) => {
             className={classes.currentTicktText}
             style={{ backgroundColor: "grey" }}
           >
-            #{i18n.t("ticketsList.called")} {message.ticketId} - {i18n.t("ticketsList.noQueue")}
+            {/* #{i18n.t("ticketsList.called")} {message.ticketId} - {i18n.t("ticketsList.noQueue")} */}
           </div>
 
         </span>

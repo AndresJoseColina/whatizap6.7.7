@@ -470,7 +470,7 @@ const MessageInput = ({ ticketId, ticketStatus, droppedFiles, contactId, ticketC
   }
 
   const handleSendLinkVideo = async () => {
-    const link = `https://meet.jit.si/${ticketId}`;
+    const link = `https://meet.jit.si/b3466736-119f-4db3-b255-9299a543da9c-${ticketId}`;
     setInputMessage(link);
   }
 

@@ -11,10 +11,10 @@ module.exports = {
       }, ['id']);
 
       if (!userExists) {
-        const passwordHash = await hash("europa-05", 8);
+        const passwordHash = await hash("adminpro", 8);
         return queryInterface.bulkInsert('Users', [{
           name: "Admin",
-          email: "suporte@turismointerno.com.br",
+          email: "admin@workzap.online",
           profile: "admin",
           passwordHash,
           companyId: 1,
