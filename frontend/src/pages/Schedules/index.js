@@ -10,71 +10,48 @@ import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import Button from "@material-ui/core/Button";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import IconButton from "@material-ui/core/IconButton";
+import SearchIcon from "@material-ui/icons/Search";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
+
+import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+import EditIcon from "@material-ui/icons/Edit";
+
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
+import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
+
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
-import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
-// import MessageModal from "../../components/MessageModal"
+import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ScheduleModal from "../../components/ScheduleModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import moment from "moment";
-// import { SocketContext } from "../../context/Socket/SocketContext";
+import { capitalize } from "lodash";
+import { socketConnection } from "../../services/socket";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePlans from "../../hooks/usePlans";
-import { Calendar, momentLocalizer } from "react-big-calendar";
-import "moment/locale/pt-br";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import SearchIcon from "@material-ui/icons/Search";
-import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import EditIcon from "@material-ui/icons/Edit";
 
-import "./Schedules.css"; // Importe o arquivo CSS
-
-// Defina a função getUrlParam antes de usá-la
-function getUrlParam(paramName) {
-  const searchParams = new URLSearchParams(window.location.search);
-  return searchParams.get(paramName);
-}
-
-const eventTitleStyle = {
-  fontSize: "14px", // Defina um tamanho de fonte menor
-  overflow: "hidden", // Oculte qualquer conteúdo excedente
-  whiteSpace: "nowrap", // Evite a quebra de linha do texto
-  textOverflow: "ellipsis", // Exiba "..." se o texto for muito longo
-};
-
-const localizer = momentLocalizer(moment);
-var defaultMessages = {
-  date: i18n.t("schedules.date"),
-  time: i18n.t("schedules.time"),
-  event: i18n.t("schedules.event"),
-  allDay: i18n.t("schedules.allDay"),
-  week: i18n.t("schedules.week"),
-  work_week: i18n.t("schedules.work_week"),
-  day: i18n.t("schedules.day"),
-  month: i18n.t("schedules.month"),
-  previous: i18n.t("schedules.previous"),
-  next: i18n.t("schedules.next"),
-  yesterday: i18n.t("schedules.yesterday"),
-  tomorrow: i18n.t("schedules.tomorrow"),
-  today: i18n.t("schedules.today"),
-  agenda: i18n.t("schedules.agenda"),
-  noEventsInRange: i18n.t("schedules.noEventsInRange"),
-  showMore: function showMore(total) {
-    return "+" + total + " mais";
-  },
+// A custom hook that builds on useLocation to parse
+// the query string for you.
+const getUrlParam = (param) => {
+  return new URLSearchParams(window.location.search).get(param);
 };
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_SCHEDULES") {
     const schedules = action.payload;
     const newSchedules = [];
-
+    console.log("payload")
+    console.log(schedules)
     schedules.forEach((schedule) => {
       const scheduleIndex = state.findIndex((s) => s.id === schedule.id);
       if (scheduleIndex !== -1) {
@@ -121,34 +98,13 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "scroll",
     ...theme.scrollbarStyles,
   },
-  calendarToolbar: {
-    "& .rbc-toolbar-label": {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-    },
-    "& .rbc-btn-group button": {
-      color: theme.mode === "light" ? theme.palette.light : "white",
-      "&:hover": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&:active": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&:focus": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-      "&.rbc-active": {
-        color: theme.palette.mode === "dark" ? "#fff" : "#000",
-      },
-    },
-  },
 }));
 
 const Schedules = () => {
   const classes = useStyles();
   const history = useHistory();
 
-  //   const socketManager = useContext(SocketContext);
-  const { user, socket } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -168,20 +124,19 @@ const Schedules = () => {
       const companyId = user.companyId;
       const planConfigs = await getPlanCompany(undefined, companyId);
       if (!planConfigs.plan.useSchedules) {
-        toast.error(
-          "Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando."
-        );
+        toast.error("Esta empresa não possui permissão para acessar essa página! Estamos lhe redirecionando.");
         setTimeout(() => {
-          history.push(`/`);
+          history.push(`/`)
         }, 1000);
       }
     }
     fetchData();
-  }, [user, history, getPlanCompany]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchSchedules = useCallback(async () => {
     try {
-      const { data } = await api.get("/schedules", {
+      const { data } = await api.get("/schedules/", {
         params: { searchParam, pageNumber },
       });
 
@@ -219,10 +174,11 @@ const Schedules = () => {
   ]);
 
   useEffect(() => {
-    // handleOpenScheduleModalFromContactId();
-    // const socket = socketManager.GetSocket(user.companyId, user.id);
+    handleOpenScheduleModalFromContactId();
+    const socket = socketConnection({ companyId: user.companyId });
 
-    const onCompanySchedule = (data) => {
+    socket.on(`company${user.companyId}-schedule`, (data) => {
+      console.log(data)
       if (data.action === "update" || data.action === "create") {
         dispatch({ type: "UPDATE_SCHEDULES", payload: data.schedule });
       }
@@ -230,14 +186,12 @@ const Schedules = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_SCHEDULE", payload: +data.scheduleId });
       }
-    };
-
-    socket.on(`company${user.companyId}-schedule`, onCompanySchedule);
+    });
 
     return () => {
-      socket.off(`company${user.companyId}-schedule`, onCompanySchedule);
+      socket.disconnect();
     };
-  }, [socket]);
+  }, [handleOpenScheduleModalFromContactId, user]);
 
   const cleanContact = () => {
     setContactId("");
@@ -305,27 +259,22 @@ const Schedules = () => {
           `${i18n.t("schedules.confirmationModal.deleteTitle")}`
         }
         open={confirmModalOpen}
-        onClose={() => setConfirmModalOpen(false)}
+        onClose={setConfirmModalOpen}
         onConfirm={() => handleDeleteSchedule(deletingSchedule.id)}
       >
         {i18n.t("schedules.confirmationModal.deleteMessage")}
       </ConfirmationModal>
-      {scheduleModalOpen && (
-        <ScheduleModal
-          open={scheduleModalOpen}
-          onClose={handleCloseScheduleModal}
-          reload={fetchSchedules}
-          // aria-labelledby="form-dialog-title"
-          scheduleId={selectedSchedule ? selectedSchedule.id : null}
-          contactId={contactId}
-          cleanContact={cleanContact}
-          user={user}
-        />
-      )}
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onClose={handleCloseScheduleModal}
+        reload={fetchSchedules}
+        aria-labelledby="form-dialog-title"
+        scheduleId={selectedSchedule && selectedSchedule.id}
+        contactId={contactId}
+        cleanContact={cleanContact}
+      />
       <MainHeader>
-        <Title>
-          {i18n.t("schedules.title")} ({schedules.length})
-        </Title>
+        <Title>{i18n.t("schedules.title")} ({schedules.length})</Title>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
@@ -354,38 +303,64 @@ const Schedules = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Calendar
-          messages={defaultMessages}
-          formats={{
-            agendaDateFormat: "DD/MM ddd",
-            weekdayFormat: "dddd",
-          }}
-          localizer={localizer}
-          events={schedules.map((schedule) => ({
-            title: (
-              <div key={schedule.id} className="event-container">
-                <div style={eventTitleStyle}>{schedule?.contact?.name}</div>
-                <DeleteOutlineIcon
-                  onClick={() => handleDeleteSchedule(schedule.id)}
-                  className="delete-icon"
-                />
-                <EditIcon
-                  onClick={() => {
-                    handleEditSchedule(schedule);
-                    setScheduleModalOpen(true);
-                  }}
-                  className="edit-icon"
-                />
-              </div>
-            ),
-            start: new Date(schedule.sendAt),
-            end: new Date(schedule.sendAt),
-          }))}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 500 }}
-          className={classes.calendarToolbar}
-        />
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell align="center">
+                {i18n.t("schedules.table.contact")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("schedules.table.body")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("schedules.table.sendAt")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("schedules.table.status")}
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("schedules.table.actions")}
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <>
+              {schedules.map((schedule) => (
+                <TableRow key={schedule.id}>
+                  <TableCell align="center">{schedule.contact.name}</TableCell>
+                  <TableCell align="center" title={schedule.body}>
+                    {truncate(schedule.body, 25)}
+                  </TableCell>
+                  <TableCell align="center">
+                    {moment(schedule.sendAt).format("DD/MM/YYYY HH:mm:ss")}
+                  </TableCell>
+                  <TableCell align="center">
+                    {capitalize(schedule.status)}
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => handleEditSchedule(schedule)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        setConfirmModalOpen(true);
+                        setDeletingSchedule(schedule);
+                      }}
+                    >
+                      <DeleteOutlineIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {loading && <TableRowSkeleton columns={4} />}
+            </>
+          </TableBody>
+        </Table>
       </Paper>
     </MainContainer>
   );
